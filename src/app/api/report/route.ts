@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Generate PDF report
     const pdfBuffer = appraisalData ? generateValuationPDF(appraisalData) : generateBasicPDF(domain)
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as BodyInit, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${domain}-valuation-report.pdf"`

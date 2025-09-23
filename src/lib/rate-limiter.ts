@@ -14,7 +14,7 @@ export function checkRateLimit(ip: string): { allowed: boolean; remaining: numbe
   
   // Clean up expired entries periodically
   if (Math.random() < 0.01) {
-    for (const [key, value] of rateLimitMap.entries()) {
+    for (const [key, value] of Array.from(rateLimitMap.entries())) {
       if (value.resetTime < now) {
         rateLimitMap.delete(key)
       }
