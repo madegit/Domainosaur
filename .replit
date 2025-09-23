@@ -38,3 +38,8 @@ externalPort = 3000
 [agent]
 integrations = ["javascript_xai:1.0.0"]
 expertMode = true
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["npm", "start"]
+build = ["npm"]
