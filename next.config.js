@@ -5,10 +5,16 @@ const nextConfig = {
     allowedRevalidateHeaderKeys: ['*']
   },
   // Configure allowed development origins for Replit
-  allowedDevOrigins: ['*'],
+  allowedDevOrigins: [
+    '*.replit.dev',
+    '*.repl.co',
+    '127.0.0.1',
+    'localhost',
+    '0.0.0.0'
+  ],
   // Disable strict mode to avoid development warnings
   reactStrictMode: false,
-  // Allow all hosts in development
+  // Security headers
   async headers() {
     return [
       {
