@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Download, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
-import type { DomainAppraisal } from '@/types'
+import type { DomainAppraisal } from '../types'
 
 interface DomainResultsProps {
   result: DomainAppraisal
@@ -55,9 +55,12 @@ export default function DomainResults({ result }: DomainResultsProps) {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
+      } else {
+        alert('Failed to generate report. Please try again.')
       }
     } catch (error) {
       console.error('Failed to download report:', error)
+      alert('Failed to download report. Please try again.')
     }
   }
 

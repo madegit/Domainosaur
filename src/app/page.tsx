@@ -1,5 +1,5 @@
 import React from 'react'
-import DomainEvaluator from '@/components/DomainEvaluator'
+import DomainEvaluator from '../components/DomainEvaluator'
 
 export default function Home() {
   return (

@@ -52,6 +52,7 @@ export interface FactorWeights {
   age: number
   traffic: number
   liquidity: number
+  legal: number
 }
 
 export interface AppraisalOptions {

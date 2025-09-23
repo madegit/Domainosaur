@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { evaluateDomain } from '@/lib/valuation'
-import { checkRateLimit } from '@/lib/rate-limiter'
+import { evaluateDomain } from '../../../lib/valuation'
+import { checkRateLimit } from '../../../lib/rate-limiter'
+import { pool } from '../../../lib/database'
+import '../../../app/startup' // Ensure database is initialized
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     const rateLimit = checkRateLimit(ip)
     
     if (!rateLimit.allowed) {
@@ -37,6 +39,30 @@ export async function POST(request: NextRequest) {
     }
     
     const appraisal = await evaluateDomain(cleanDomain, options)
+    
+    // Persist appraisal to database
+    try {
+      const client = await pool.connect()
+      try {
+        await client.query(`
+          INSERT INTO appraisals (domain, final_score, breakdown, price_estimate, comps, legal_flag, ai_comment)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+          appraisal.domain,
+          appraisal.finalScore,
+          JSON.stringify(appraisal.breakdown),
+          JSON.stringify(appraisal.priceEstimate),
+          JSON.stringify(appraisal.comps),
+          appraisal.legalFlag,
+          appraisal.aiComment
+        ])
+      } finally {
+        client.release()
+      }
+    } catch (dbError) {
+      console.error('Failed to persist appraisal:', dbError)
+      // Continue anyway - don't fail the request if DB save fails
+    }
     
     const response = NextResponse.json(appraisal)
     response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString())

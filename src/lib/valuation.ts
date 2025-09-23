@@ -1,6 +1,7 @@
 // Core domain valuation algorithm implementing the 10-factor system
-import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '@/types'
-import { findKeywordValue } from '@/data/industry-keywords'
+import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '../types'
+import { findKeywordValue } from '../data/industry-keywords'
+import { findComparables } from '../data/sample-comps'
 import { analyzeBrandability } from './xai'
 
 export const DEFAULT_WEIGHTS: FactorWeights = {
@@ -12,7 +13,8 @@ export const DEFAULT_WEIGHTS: FactorWeights = {
   comps: 0.12,
   age: 0.06,
   traffic: 0.04,
-  liquidity: 0.06
+  liquidity: 0.06,
+  legal: 0.0 // Legal is a gating factor (multiplier), not weighted
 }
 
 // Legal brand list for trademark risk assessment
@@ -58,7 +60,12 @@ export function scoreLengthAndSimplicity(domain: string): number {
 }
 
 export function scoreKeywords(domain: string): { score: number; industry: string; keywords: string[] } {
-  return findKeywordValue(domain)
+  const result = findKeywordValue(domain)
+  return {
+    score: result.score,
+    industry: result.industry,
+    keywords: result.matchedKeywords
+  }
 }
 
 export function scoreTLD(domain: string, targetCountry?: string): number {
@@ -116,18 +123,29 @@ export function scoreIndustryRelevance(industry: string, keywords: string[]): nu
 }
 
 export function scoreComparableSales(domain: string, comps: any[] = []): number {
-  // For MVP, return neutral score if no comps available
   if (!comps || comps.length === 0) {
     return 50
   }
   
-  // TODO: Implement similarity scoring based on:
-  // - Length similarity
-  // - Keyword similarity  
-  // - TLD similarity
-  // - Industry relevance
+  // Calculate average similarity score from comparables
+  const avgSimilarity = comps.reduce((sum, comp) => sum + (comp.similarity || 0), 0) / comps.length
   
-  return 50
+  // Convert similarity to score (0-100 scale)
+  // High similarity (80+) = good comps data = high score (80-90)
+  // Medium similarity (50-80) = decent comps = medium score (60-80)  
+  // Low similarity (20-50) = weak comps = lower score (40-60)
+  
+  if (avgSimilarity >= 80) {
+    return 85
+  } else if (avgSimilarity >= 60) {
+    return 75
+  } else if (avgSimilarity >= 40) {
+    return 65
+  } else if (avgSimilarity >= 20) {
+    return 55
+  } else {
+    return 50
+  }
 }
 
 export function scoreAge(domain: string, ageInYears?: number): number {
@@ -196,24 +214,24 @@ export function scoreLiquidity(domain: string): number {
   return 25
 }
 
-export function assessLegalRisk(domain: string): { flag: 'clear' | 'warning' | 'severe'; multiplier: number } {
+export function assessLegalRisk(domain: string): { flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number } {
   const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz)$/, '')
   
   // Check for exact matches
   for (const brand of LEGAL_BRANDS) {
     if (domainName === brand || domainName === brand + 's' || domainName === brand + 'app' || domainName === brand + 'api') {
-      return { flag: 'severe', multiplier: 0 }
+      return { flag: 'severe', multiplier: 0, score: 0 }
     }
   }
   
   // Check for substring matches
   for (const brand of LEGAL_BRANDS) {
     if (domainName.includes(brand) && brand.length >= 4) {
-      return { flag: 'warning', multiplier: 0.5 }
+      return { flag: 'warning', multiplier: 0.5, score: 25 }
     }
   }
   
-  return { flag: 'clear', multiplier: 1.0 }
+  return { flag: 'clear', multiplier: 1.0, score: 100 }
 }
 
 export function mapScoreToPriceBracket(score: number): { min: number; max: number; bracket: string } {
@@ -270,7 +288,10 @@ export async function evaluateDomain(
   const keywordResult = scoreKeywords(domain)
   const tldScore = scoreTLD(domain, options.country)
   const industryScore = scoreIndustryRelevance(keywordResult.industry, keywordResult.keywords)
-  const compsScore = scoreComparableSales(domain, []) // TODO: Load actual comps
+  
+  // Load comparable sales
+  const comparables = findComparables(domain, 5)
+  const compsScore = scoreComparableSales(domain, comparables)
   const ageScore = scoreAge(domain, options.domainAge)
   const trafficScore = scoreTraffic(domain, options.userTraffic)
   const liquidityScore = scoreLiquidity(domain)
@@ -291,13 +312,19 @@ export async function evaluateDomain(
     { factor: 'comps', score: compsScore, weight: weights.comps, contribution: weights.comps * compsScore },
     { factor: 'age', score: ageScore, weight: weights.age, contribution: weights.age * ageScore },
     { factor: 'traffic', score: trafficScore, weight: weights.traffic, contribution: weights.traffic * trafficScore },
-    { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore }
+    { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore },
+    { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` }
   ]
   
   const rawScore = breakdown.reduce((sum, factor) => sum + factor.contribution, 0)
   const finalScore = rawScore * legalRisk.multiplier
   
-  const priceEstimate = calculatePriceEstimate(finalScore)
+  // Calculate price estimate with comps median
+  const compsMedian = comparables.length > 0 
+    ? comparables.sort((a, b) => a.soldPrice - b.soldPrice)[Math.floor(comparables.length / 2)].soldPrice
+    : undefined
+    
+  const priceEstimate = calculatePriceEstimate(finalScore, compsMedian)
   const bracket = mapScoreToPriceBracket(finalScore)
   
   return {
@@ -308,6 +335,6 @@ export async function evaluateDomain(
     breakdown,
     legalFlag: legalRisk.flag,
     aiComment: brandabilityResult.commentary,
-    comps: [] // TODO: Load actual comparable sales
+    comps: comparables
   }
 }

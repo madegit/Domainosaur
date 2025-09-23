@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Search, Loader2 } from 'lucide-react'
-import type { DomainAppraisal } from '@/types'
+import type { DomainAppraisal } from '../types'
 import DomainResults from './DomainResults'
 
 export default function DomainEvaluator() {
@@ -27,6 +27,7 @@ export default function DomainEvaluator() {
 
     setLoading(true)
     setError('')
+    setResult(null)
     
     try {
       const response = await fetch('/api/appraise', {
@@ -40,13 +41,25 @@ export default function DomainEvaluator() {
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to evaluate domain')
+        if (response.status === 429) {
+          setError(`Rate limit exceeded. You can try again in ${Math.ceil(data.retryAfter / 60)} minutes.`)
+        } else {
+          setError(data.error || 'Failed to evaluate domain')
+        }
+        return
       }
 
-      const data = await response.json()
       setResult(data)
       setSearchCount(prev => prev + 1)
+      
+      // Update remaining count from response headers
+      const remaining = response.headers.get('X-RateLimit-Remaining')
+      if (remaining) {
+        setSearchCount(5 - parseInt(remaining))
+      }
     } catch (err) {
       setError('Failed to evaluate domain. Please try again.')
       console.error('Evaluation error:', err)
