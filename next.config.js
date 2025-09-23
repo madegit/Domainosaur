@@ -4,6 +4,8 @@ const nextConfig = {
   experimental: {
     allowedRevalidateHeaderKeys: ['*']
   },
+  // Configure allowed development origins for Replit
+  allowedDevOrigins: ['*'],
   // Disable strict mode to avoid development warnings
   reactStrictMode: false,
   // Allow all hosts in development
