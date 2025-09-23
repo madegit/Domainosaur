@@ -4,7 +4,25 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 })
 
+// Database initialization promise to prevent multiple concurrent initializations
+let initPromise: Promise<void> | null = null
+
 export async function initDatabase() {
+  // If initialization is already in progress, wait for it to complete
+  if (initPromise) {
+    return initPromise
+  }
+
+  // Start initialization with error handling
+  initPromise = performInit().catch(err => {
+    // Reset promise on failure so future calls can retry
+    initPromise = null
+    throw err
+  })
+  return initPromise
+}
+
+async function performInit() {
   const client = await pool.connect()
   
   try {

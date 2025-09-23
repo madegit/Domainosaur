@@ -1,17 +1,11 @@
 // Initialize database on app startup
 import { initDatabase } from '../lib/database'
 
-let initialized = false
-
 export async function ensureDbInitialized() {
-  if (!initialized) {
-    try {
-      await initDatabase()
-      initialized = true
-      console.log('Database initialized successfully')
-    } catch (error) {
-      console.error('Failed to initialize database:', error)
-    }
+  try {
+    await initDatabase()
+  } catch (error) {
+    console.error('Failed to initialize database:', error)
   }
 }
 
