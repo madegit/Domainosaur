@@ -1,76 +1,76 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Download, Alert, Check, Close } from '@nsmr/pixelart-react'
-import type { DomainAppraisal } from '../types'
+import React from "react";
+import { Download, Alert, Check, Close } from "@nsmr/pixelart-react";
+import type { DomainAppraisal } from "../types";
 
 interface DomainResultsProps {
-  result: DomainAppraisal
+  result: DomainAppraisal;
 }
 
 export default function DomainResults({ result }: DomainResultsProps) {
   const getLegalIcon = () => {
     switch (result.legalFlag) {
-      case 'clear':
-        return <Check className="h-5 w-5 text-green-500" />
-      case 'warning':
-        return <Alert className="h-5 w-5 text-yellow-500" />
-      case 'severe':
-        return <Close className="h-5 w-5 text-red-500" />
+      case "clear":
+        return <Check className="h-5 w-5 text-green-500" />;
+      case "warning":
+        return <Alert className="h-5 w-5 text-yellow-500" />;
+      case "severe":
+        return <Close className="h-5 w-5 text-red-500" />;
       default:
-        return <Alert className="h-5 w-5 text-gray-500" />
+        return <Alert className="h-5 w-5 text-gray-500" />;
     }
-  }
+  };
 
   const getLegalText = () => {
     switch (result.legalFlag) {
-      case 'clear':
-        return 'No trademark conflicts detected'
-      case 'warning':
-        return 'Possible trademark conflicts - review recommended'
-      case 'severe':
-        return 'Significant trademark risks detected - manual review required'
+      case "clear":
+        return "No trademark conflicts detected";
+      case "warning":
+        return "Possible trademark conflicts - review recommended";
+      case "severe":
+        return "Significant trademark risks detected - manual review required";
       default:
-        return 'Legal status unknown'
+        return "Legal status unknown";
     }
-  }
+  };
 
   const downloadReport = async () => {
     try {
-      const response = await fetch('/api/report', {
-        method: 'POST',
+      const response = await fetch("/api/report", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ domain: result.domain }),
-      })
+      });
 
       if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${result.domain}-valuation-report.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${result.domain}-valuation-report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
       } else {
-        alert('Failed to generate report. Please try again.')
+        alert("Failed to generate report. Please try again.");
       }
     } catch (error) {
-      console.error('Failed to download report:', error)
-      alert('Failed to download report. Please try again.')
+      console.error("Failed to download report:", error);
+      alert("Failed to download report. Please try again.");
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="card">
-        <div className="retro-header flex items-center gap-3 mb-4">
-          <Alert className="h-6 w-6" />
-          <span className="text-lg font-bold">VALUATION RESULTS</span>
+        <div className="retro-header flex items-cente">
+          <Alert className="h-6 w-6 mr-2" />
+          <span className="text-lg font-bold">Valuation Result</span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -84,16 +84,16 @@ export default function DomainResults({ result }: DomainResultsProps) {
               </span>
             </div>
           </div>
-          <div className="bg-brand-primary text-white p-4 rounded">
+          <div className="text-brand-primary p-2 rounded">
             <div className="flex items-center gap-2 mb-2">
               <Check className="h-5 w-5" />
-              <span className="text-sm font-bold">FINAL SCORE</span>
+              <span className="text-sm text-brand-primary font-bold">Final Score</span>
             </div>
             <div className="text-3xl font-bold text-center">
               {result.finalScore.toFixed(1)}/100
             </div>
             <div className="factor-bar mt-2">
-              <div 
+              <div
                 className="factor-progress"
                 style={{ width: `${result.finalScore}%` }}
               />
@@ -128,7 +128,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
             DOWNLOAD PDF
           </button>
         </div>
-        
+
         <div className="space-y-4">
           {result.breakdown.map((factor, index) => (
             <div key={index} className="space-y-2">
@@ -144,7 +144,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
                 </div>
               </div>
               <div className="factor-bar">
-                <div 
+                <div
                   className="factor-progress"
                   style={{ width: `${factor.score}%` }}
                 />
@@ -166,9 +166,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
         <div className="flex items-center gap-3">
           {getLegalIcon()}
           <div>
-            <p className="text-brand-primary font-medium">
-              {getLegalText()}
-            </p>
+            <p className="text-brand-primary font-medium">{getLegalText()}</p>
           </div>
         </div>
       </div>
@@ -179,7 +177,10 @@ export default function DomainResults({ result }: DomainResultsProps) {
           <h3 className="text-lg font-semibold mb-4">Comparable Sales</h3>
           <div className="space-y-3">
             {result.comps.map((comp, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+              <div
+                key={index}
+                className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0"
+              >
                 <div>
                   <span className="font-medium">{comp.domain}</span>
                   <span className="text-sm text-brand-secondary ml-2">
@@ -204,11 +205,15 @@ export default function DomainResults({ result }: DomainResultsProps) {
       <div className="card">
         <h3 className="text-lg font-semibold mb-3">Valuation Explanation</h3>
         <div className="text-sm text-brand-secondary space-y-2">
-          <p><strong>Investor Price:</strong> {result.priceEstimate.investor}</p>
-          <p><strong>Retail Price:</strong> {result.priceEstimate.retail}</p>
+          <p>
+            <strong>Investor Price:</strong> {result.priceEstimate.investor}
+          </p>
+          <p>
+            <strong>Retail Price:</strong> {result.priceEstimate.retail}
+          </p>
           <p className="mt-3">{result.priceEstimate.explanation}</p>
         </div>
       </div>
     </div>
-  )
+  );
 }

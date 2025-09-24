@@ -78,16 +78,15 @@
   .card {
     background-color: #f8f9ff;
     border: 2px solid #2323FF;
-    border-radius: 0.5rem;
+    border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 4px 4px 0px #2323FF;
     letter-spacing: -1px;
   }
   
   .factor-bar {
-    background-color: rgba(35, 35, 255, 0.2);
+    background-color: rgb(255, 255, 255, 0.2);
     border-radius: 9999px;
-    height: 0.5rem;
+    height: 0.7rem;
     width: 100%;
     border: 1px solid #2323FF;
   }
@@ -95,20 +94,17 @@
   .factor-progress {
     background-color: #2323FF;
     border-radius: 9999px;
-    height: 0.5rem;
+    height: 0.7rem;
     transition: all 300ms;
   }
   
   .retro-header {
-    background-color: #2323FF;
-    color: white;
+    color: #2323FF;
     padding: 1rem 1.5rem;
     border-radius: 0.5rem 0.5rem 0 0;
     font-weight: bold;
     letter-spacing: -2px;
-    text-transform: uppercase;
-    border: 2px solid #2323FF;
-  }
+   }
   
   .retro-container {
     max-width: 1200px;
