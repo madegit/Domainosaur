@@ -53,10 +53,13 @@ font-style: italic;
     --font-weight-bold: 700;
     --leading-relaxed: 1.625;
     --animate-spin: spin 1s linear infinite;
+    --default-transition-duration: 150ms;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
     --color-brand-primary: #2323FF;
     --color-brand-secondary: rgba(35, 35, 255, 0.7);
+    --color-brand-accent: rgba(35, 35, 255, 0.9);
     --color-brand-background: #ffffff;
     --color-brand-surface: #f8f9ff;
   }
@@ -379,8 +382,14 @@ font-style: italic;
   .border-red-200 {
     border-color: var(--color-red-200);
   }
+  .bg-brand-accent {
+    background-color: var(--color-brand-accent);
+  }
   .bg-brand-background {
     background-color: var(--color-brand-background);
+  }
+  .bg-brand-primary {
+    background-color: var(--color-brand-primary);
   }
   .bg-brand-surface {
     background-color: var(--color-brand-surface);
@@ -470,6 +479,18 @@ font-style: italic;
   }
   .italic {
     font-style: italic;
+  }
+  .ring-brand-primary {
+    --tw-ring-color: var(--color-brand-primary);
+  }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
   .last\:border-b-0 {
     &:last-child {
@@ -629,6 +650,11 @@ font-style: italic;
   syntax: "*";
   inherits: false;
 }
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -641,6 +667,7 @@ font-style: italic;
       --tw-border-style: solid;
       --tw-leading: initial;
       --tw-font-weight: initial;
+      --tw-outline-style: solid;
     }
   }
 }
