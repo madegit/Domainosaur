@@ -1,3 +1,17 @@
+export interface WhoisData {
+  domain: string
+  isAvailable: boolean
+  registrationDate?: string
+  expirationDate?: string
+  registrar?: string
+  nameServers?: string[]
+  registrant?: string
+  adminContact?: string
+  ageInYears?: number
+  status?: string
+  lastUpdated?: string
+}
+
 export interface DomainAppraisal {
   domain: string
   finalScore: number
@@ -11,6 +25,7 @@ export interface DomainAppraisal {
   comps?: ComparableSale[]
   legalFlag: 'clear' | 'warning' | 'severe'
   aiComment: string
+  whoisData?: WhoisData
   createdAt?: string
 }
 

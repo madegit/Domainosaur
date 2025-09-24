@@ -2,7 +2,7 @@
 import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '../types'
 import { findKeywordValue } from '../data/industry-keywords'
 import { findComparables } from '../data/sample-comps'
-import { analyzeBrandability, estimateTraffic, analyzeTrademarkRisk } from './xai'
+import { analyzeBrandability, estimateTraffic, analyzeTrademarkRisk, getWhoisData, type WhoisData } from './xai'
 
 export const DEFAULT_WEIGHTS: FactorWeights = {
   length: 0.12,
@@ -439,6 +439,9 @@ export async function evaluateDomain(
   weights: FactorWeights = DEFAULT_WEIGHTS
 ): Promise<DomainAppraisal> {
   
+  // Get WHOIS data for the domain
+  const whoisData = await getWhoisData(domain)
+  
   // Score each factor
   const lengthScore = scoreLengthAndSimplicity(domain)
   const keywordResult = scoreKeywords(domain)
@@ -448,7 +451,7 @@ export async function evaluateDomain(
   // Load comparable sales
   const comparables = await findComparables(domain, 5)
   const compsScore = scoreComparableSales(domain, comparables)
-  const ageResult = await scoreDomainAge(domain, options.domainAge)
+  const ageResult = await scoreDomainAge(domain, whoisData.ageInYears || options.domainAge)
   const trafficResult = await scoreDomainTraffic(domain, options.userTraffic)
   const liquidityScore = scoreLiquidity(domain)
   
@@ -457,6 +460,9 @@ export async function evaluateDomain(
   
   // Assess legal risk
   const legalRisk = await assessLegalRisk(domain)
+  
+  // Apply availability penalty - if domain is not available, reduce value significantly
+  const availabilityMultiplier = whoisData.isAvailable ? 1.0 : 0.6 // 40% reduction for taken domains
   
   // Calculate weighted score
   const breakdown: FactorBreakdown[] = [
@@ -469,11 +475,12 @@ export async function evaluateDomain(
     { factor: 'age', score: ageResult.score, weight: weights.age, contribution: weights.age * ageResult.score },
     { factor: 'traffic', score: trafficResult.score, weight: weights.traffic, contribution: weights.traffic * trafficResult.score },
     { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore },
-    { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` }
+    { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` },
+    { factor: 'availability', score: whoisData.isAvailable ? 100 : 60, weight: 0, contribution: 0, description: `${whoisData.isAvailable ? 'AVAILABLE' : 'TAKEN'}: Acts as ${availabilityMultiplier}x multiplier` }
   ]
   
   const rawScore = breakdown.reduce((sum, factor) => sum + factor.contribution, 0)
-  const finalScore = rawScore * legalRisk.multiplier
+  const finalScore = rawScore * legalRisk.multiplier * availabilityMultiplier
   
   // Calculate price estimate with comps median
   const sortedComparables = [...comparables].sort((a, b) => a.soldPrice - b.soldPrice)
@@ -492,6 +499,7 @@ export async function evaluateDomain(
     breakdown,
     legalFlag: legalRisk.flag,
     aiComment: brandabilityResult.commentary,
-    comps: comparables
+    comps: comparables,
+    whoisData
   }
 }
