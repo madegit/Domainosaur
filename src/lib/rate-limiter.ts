@@ -5,8 +5,9 @@ interface RateLimitEntry {
 }
 
 const rateLimitMap = new Map<string, RateLimitEntry>()
-const RATE_LIMIT = 5
-const WINDOW_MS = 60 * 60 * 1000 // 1 hour
+// Use environment variables or default to stricter limits for free users
+const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_REQUESTS || '3', 10)
+const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW || '3600', 10) * 1000 // Convert seconds to milliseconds
 
 export function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
   const now = Date.now()

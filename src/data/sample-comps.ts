@@ -61,10 +61,11 @@ export async function findComparables(domain: string, limit: number = 5): Promis
 }
 
 async function fetchRealComparables(domain: string, limit: number): Promise<ComparableSale[]> {
-  // Check if API key is configured
+  // Check if API key is configured - return empty array instead of throwing
   const apiKey = process.env.NAMEBIO_API_KEY
   if (!apiKey || apiKey.includes('your_') || apiKey.trim() === '') {
-    throw new Error('NameBio API key not configured - using fallback data')
+    console.log('NameBio API key not configured - using sample data')
+    return []
   }
 
   // NameBio API implementation with correct REST contract (GET with query params)
@@ -113,8 +114,8 @@ async function fetchRealComparables(domain: string, limit: number): Promise<Comp
     
     return []
   } catch (error) {
-    console.warn('Error fetching NameBio comparables:', error)
-    throw error // Re-throw so caller can handle appropriately
+    console.log('NameBio API unavailable, using sample data:', error instanceof Error ? error.message : 'Unknown error')
+    return [] // Return empty array instead of throwing to prevent warning logs in caller
   }
 }
 

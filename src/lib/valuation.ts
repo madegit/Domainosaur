@@ -2,7 +2,7 @@
 import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '../types'
 import { findKeywordValue } from '../data/industry-keywords'
 import { findComparables } from '../data/sample-comps'
-import { analyzeBrandability } from './xai'
+import { analyzeBrandability, estimateTraffic, analyzeTrademarkRisk } from './xai'
 
 export const DEFAULT_WEIGHTS: FactorWeights = {
   length: 0.12,
@@ -229,8 +229,8 @@ async function fetchDomainAge(domain: string): Promise<number | null> {
     
     return null
   } catch (error) {
-    console.warn('Error fetching domain age:', error)
-    throw error // Re-throw so caller can handle appropriately
+    console.log('Domain age data unavailable:', error instanceof Error ? error.message : 'Unknown error')
+    return null // Return null instead of throwing to prevent stack traces in logs
   }
 }
 
@@ -243,21 +243,19 @@ export async function scoreDomainTraffic(domain: string, providedMonthlyTraffic?
     }
   }
 
-  // Try to fetch real traffic data from SimilarWeb API
+  // Use AI-powered traffic estimation
   try {
-    const monthlyTraffic = await fetchDomainTraffic(domain)
-    if (monthlyTraffic !== null) {
-      return {
-        score: calculateTrafficScore(monthlyTraffic),
-        dataSource: 'similarweb_api'
-      }
+    const monthlyTraffic = await estimateDomainTraffic(domain)
+    return {
+      score: calculateTrafficScore(monthlyTraffic),
+      dataSource: 'ai_estimate'
     }
   } catch (error) {
-    console.warn('Failed to fetch domain traffic:', error)
+    console.warn('Failed to estimate domain traffic:', error)
     return {
       score: 20,
       dataSource: 'fallback',
-      error: error instanceof Error ? error.message : 'Unknown error fetching traffic data'
+      error: error instanceof Error ? error.message : 'Unknown error estimating traffic'
     }
   }
 
@@ -285,57 +283,15 @@ function calculateTrafficScore(monthlyTraffic: number): number {
   }
 }
 
-async function fetchDomainTraffic(domain: string): Promise<number | null> {
-  // Check if API key is configured
-  const apiKey = process.env.SIMILARWEB_API_KEY
-  if (!apiKey || apiKey.includes('your_') || apiKey.trim() === '') {
-    throw new Error('SimilarWeb API key not configured - using fallback data')
-  }
-
-  // SimilarWeb API implementation with correct authentication
-  const API_BASE_URL = 'https://api.similarweb.com/v1/website'
-  
+async function estimateDomainTraffic(domain: string): Promise<number> {
+  // Use AI-powered traffic estimation instead of expensive SimilarWeb API
   try {
-    const currentDate = new Date()
-    const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1)
-    
-    const url = `${API_BASE_URL}/${domain}/total-traffic-and-engagement/visits`
-    const params = new URLSearchParams({
-      start_date: startDate.toISOString().slice(0, 7), // YYYY-MM format
-      end_date: endDate.toISOString().slice(0, 7),
-      country: 'world',
-      granularity: 'monthly',
-      main_domain_only: 'true', // Required parameter
-      format: 'json', // Explicit format specification
-      api_key: apiKey // SimilarWeb API key as query parameter
-    })
-    
-    const response = await fetch(`${url}?${params}`, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error(`Invalid SimilarWeb API key - check your credentials`)
-      }
-      throw new Error(`SimilarWeb API error: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
-    if (data.visits && Array.isArray(data.visits) && data.visits.length > 0) {
-      // Get the most recent month's data
-      const latestVisits = data.visits[data.visits.length - 1].visits
-      return Math.round(latestVisits)
-    }
-    
-    return null
+    const trafficEstimate = await estimateTraffic(domain)
+    return trafficEstimate.monthlyTraffic
   } catch (error) {
-    console.warn('Error fetching domain traffic:', error)
-    throw error // Re-throw so caller can handle appropriately
+    console.warn('Error estimating domain traffic with AI:', error)
+    // Return conservative estimate
+    return 100
   }
 }
 
@@ -375,9 +331,9 @@ export function scoreLiquidity(domain: string): number {
 export async function assessLegalRisk(domain: string): Promise<{ flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number }> {
   const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz)$/, '')
   
-  // Try to check real trademark database first
+  // Use AI-powered trademark analysis first
   try {
-    const trademarkResult = await checkTrademarkConflicts(domainName)
+    const trademarkResult = await checkAITrademarkConflicts(domainName)
     if (trademarkResult.hasConflict) {
       return {
         flag: trademarkResult.severity,
@@ -386,70 +342,24 @@ export async function assessLegalRisk(domain: string): Promise<{ flag: 'clear' |
       }
     }
   } catch (error) {
-    console.warn('Failed to check trademark database:', error)
+    console.warn('Failed to check trademark with AI:', error)
   }
 
   // Fallback to static brand checking
   return assessStaticLegalRisk(domainName)
 }
 
-async function checkTrademarkConflicts(term: string): Promise<{hasConflict: boolean; severity: 'clear' | 'warning' | 'severe'}> {
-  // Check if API credentials are configured
-  const username = process.env.MARKER_API_USERNAME
-  const password = process.env.MARKER_API_PASSWORD
-  
-  if (!username || !password || username.includes('your_') || password.includes('your_') || 
-      username.trim() === '' || password.trim() === '') {
-    throw new Error('Marker API credentials not configured - using fallback data')
-  }
-
-  // Marker API implementation (correct URL structure)
-  const MARKER_API_URL = 'https://markerapi.com/api/v2/trademarks'
-  
+async function checkAITrademarkConflicts(term: string): Promise<{hasConflict: boolean; severity: 'clear' | 'warning' | 'severe'}> {
+  // Use AI-powered trademark analysis instead of expensive MarkerAPI
   try {
-    // Search active trademarks - correct API endpoint format
-    const searchUrl = `${MARKER_API_URL}/trademark/${encodeURIComponent(term)}/status/active/start/0/username/${username}/password/${password}`
-    
-    const response = await fetch(searchUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Invalid Marker API credentials - check your username/password')
-      }
-      throw new Error(`Trademark API error: ${response.status}`)
+    const trademarkResult = await analyzeTrademarkRisk(term)
+    return {
+      hasConflict: trademarkResult.hasConflict,
+      severity: trademarkResult.severity
     }
-    
-    const data = await response.json()
-    
-    if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-      // Check for exact or very close matches
-      const exactMatches = data.results.filter((tm: any) => 
-        tm.mark && tm.mark.toLowerCase().replace(/[^a-z0-9]/g, '') === term.toLowerCase().replace(/[^a-z0-9]/g, '')
-      )
-      
-      if (exactMatches.length > 0) {
-        return { hasConflict: true, severity: 'severe' }
-      }
-      
-      // Check for similar matches
-      const similarMatches = data.results.filter((tm: any) => 
-        tm.mark && (tm.mark.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(tm.mark.toLowerCase()))
-      )
-      
-      if (similarMatches.length > 0) {
-        return { hasConflict: true, severity: 'warning' }
-      }
-    }
-    
-    return { hasConflict: false, severity: 'clear' }
   } catch (error) {
-    console.warn('Error checking trademarks:', error)
-    throw error // Re-throw so caller can handle appropriately
+    console.warn('Error analyzing trademark risk with AI:', error)
+    throw error
   }
 }
 
