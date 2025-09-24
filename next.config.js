@@ -9,6 +9,8 @@ const nextConfig = {
     '*.replit.dev',
     '*.repl.co',
     '*.spock.replit.dev',
+    '*.kirk.replit.dev',
+    '4b64883a-4833-4e79-9515-c269d52eef09-00-2lylxxrq4m5b6.kirk.replit.dev',
     '095b7487-720f-42ad-9d4a-b2f5dba75e5d-00-ippnmf5i1srl.spock.replit.dev',
     '127.0.0.1',
     'localhost',
