@@ -148,13 +148,46 @@ export function scoreComparableSales(domain: string, comps: any[] = []): number 
   }
 }
 
-export function scoreAge(domain: string, ageInYears?: number): number {
-  if (!ageInYears) {
-    // Default to new domain if age not provided
-    return 25
+export async function scoreDomainAge(domain: string, providedAgeInYears?: number): Promise<{score: number; dataSource: string; error?: string}> {
+  // If age is already provided, use it
+  if (providedAgeInYears) {
+    return {
+      score: calculateAgeScore(providedAgeInYears), 
+      dataSource: 'user_provided'
+    }
   }
-  
-  if (ageInYears >= 10) {
+
+  // Try to fetch real domain age from WHOIS API
+  try {
+    const ageInYears = await fetchDomainAge(domain)
+    if (ageInYears !== null) {
+      return {
+        score: calculateAgeScore(ageInYears), 
+        dataSource: 'ip2whois_api',
+        error: undefined
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch domain age:', error)
+    return {
+      score: 25, 
+      dataSource: 'fallback',
+      error: error instanceof Error ? error.message : 'Unknown error fetching domain age'
+    }
+  }
+
+  // Fallback to neutral score if unable to determine age
+  return {
+    score: 25, 
+    dataSource: 'fallback',
+    error: 'No age data available'
+  }
+}
+
+function calculateAgeScore(ageInYears: number): number {
+  if (ageInYears >= 15) {
+    return 95
+  } else if (ageInYears >= 10) {
     return 90
   } else if (ageInYears >= 5) {
     return 70
@@ -165,19 +198,144 @@ export function scoreAge(domain: string, ageInYears?: number): number {
   }
 }
 
-export function scoreTraffic(domain: string, monthlyTraffic?: number): number {
-  if (!monthlyTraffic || monthlyTraffic === 0) {
-    return 20
+async function fetchDomainAge(domain: string): Promise<number | null> {
+  // Check if API key is configured
+  const apiKey = process.env.IP2WHOIS_API_KEY
+  if (!apiKey || apiKey.includes('your_') || apiKey.trim() === '') {
+    throw new Error('IP2WHOIS API key not configured - using fallback data')
   }
+
+  // IP2WHOIS API implementation (free tier available)
+  const API_URL = 'https://api.ip2whois.com/v2'
   
-  if (monthlyTraffic >= 100000) {
+  try {
+    const response = await fetch(`${API_URL}?key=${apiKey}&domain=${domain}`)
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error(`Invalid IP2WHOIS API key - check your credentials`)
+      }
+      throw new Error(`WHOIS API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (data.create_date) {
+      const creationDate = new Date(data.create_date)
+      const now = new Date()
+      const ageInYears = (now.getTime() - creationDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+      return Math.floor(ageInYears * 10) / 10 // Round to 1 decimal place
+    }
+    
+    return null
+  } catch (error) {
+    console.warn('Error fetching domain age:', error)
+    throw error // Re-throw so caller can handle appropriately
+  }
+}
+
+export async function scoreDomainTraffic(domain: string, providedMonthlyTraffic?: number): Promise<{score: number; dataSource: string; error?: string}> {
+  // If traffic data is already provided, use it
+  if (providedMonthlyTraffic && providedMonthlyTraffic > 0) {
+    return {
+      score: calculateTrafficScore(providedMonthlyTraffic),
+      dataSource: 'user_provided'
+    }
+  }
+
+  // Try to fetch real traffic data from SimilarWeb API
+  try {
+    const monthlyTraffic = await fetchDomainTraffic(domain)
+    if (monthlyTraffic !== null) {
+      return {
+        score: calculateTrafficScore(monthlyTraffic),
+        dataSource: 'similarweb_api'
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch domain traffic:', error)
+    return {
+      score: 20,
+      dataSource: 'fallback',
+      error: error instanceof Error ? error.message : 'Unknown error fetching traffic data'
+    }
+  }
+
+  // Fallback to low score if unable to determine traffic
+  return {
+    score: 20,
+    dataSource: 'fallback',
+    error: 'No traffic data available'
+  }
+}
+
+function calculateTrafficScore(monthlyTraffic: number): number {
+  if (monthlyTraffic >= 1000000) {
+    return 95
+  } else if (monthlyTraffic >= 100000) {
     return 90
   } else if (monthlyTraffic >= 10000) {
     return 70
   } else if (monthlyTraffic >= 1000) {
     return 50
-  } else {
+  } else if (monthlyTraffic >= 100) {
     return 30
+  } else {
+    return 20
+  }
+}
+
+async function fetchDomainTraffic(domain: string): Promise<number | null> {
+  // Check if API key is configured
+  const apiKey = process.env.SIMILARWEB_API_KEY
+  if (!apiKey || apiKey.includes('your_') || apiKey.trim() === '') {
+    throw new Error('SimilarWeb API key not configured - using fallback data')
+  }
+
+  // SimilarWeb API implementation with correct authentication
+  const API_BASE_URL = 'https://api.similarweb.com/v1/website'
+  
+  try {
+    const currentDate = new Date()
+    const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1)
+    
+    const url = `${API_BASE_URL}/${domain}/total-traffic-and-engagement/visits`
+    const params = new URLSearchParams({
+      start_date: startDate.toISOString().slice(0, 7), // YYYY-MM format
+      end_date: endDate.toISOString().slice(0, 7),
+      country: 'world',
+      granularity: 'monthly',
+      main_domain_only: 'true', // Required parameter
+      format: 'json', // Explicit format specification
+      api_key: apiKey // SimilarWeb API key as query parameter
+    })
+    
+    const response = await fetch(`${url}?${params}`, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error(`Invalid SimilarWeb API key - check your credentials`)
+      }
+      throw new Error(`SimilarWeb API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (data.visits && Array.isArray(data.visits) && data.visits.length > 0) {
+      // Get the most recent month's data
+      const latestVisits = data.visits[data.visits.length - 1].visits
+      return Math.round(latestVisits)
+    }
+    
+    return null
+  } catch (error) {
+    console.warn('Error fetching domain traffic:', error)
+    throw error // Re-throw so caller can handle appropriately
   }
 }
 
@@ -214,18 +372,106 @@ export function scoreLiquidity(domain: string): number {
   return 25
 }
 
-export function assessLegalRisk(domain: string): { flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number } {
+export async function assessLegalRisk(domain: string): Promise<{ flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number }> {
   const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz)$/, '')
   
+  // Try to check real trademark database first
+  try {
+    const trademarkResult = await checkTrademarkConflicts(domainName)
+    if (trademarkResult.hasConflict) {
+      return {
+        flag: trademarkResult.severity,
+        multiplier: trademarkResult.severity === 'severe' ? 0 : trademarkResult.severity === 'warning' ? 0.5 : 1.0,
+        score: trademarkResult.severity === 'severe' ? 0 : trademarkResult.severity === 'warning' ? 25 : 100
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to check trademark database:', error)
+  }
+
+  // Fallback to static brand checking
+  return assessStaticLegalRisk(domainName)
+}
+
+async function checkTrademarkConflicts(term: string): Promise<{hasConflict: boolean; severity: 'clear' | 'warning' | 'severe'}> {
+  // Check if API credentials are configured
+  const username = process.env.MARKER_API_USERNAME
+  const password = process.env.MARKER_API_PASSWORD
+  
+  if (!username || !password || username.includes('your_') || password.includes('your_') || 
+      username.trim() === '' || password.trim() === '') {
+    throw new Error('Marker API credentials not configured - using fallback data')
+  }
+
+  // Marker API implementation (correct URL structure)
+  const MARKER_API_URL = 'https://markerapi.com/api/v2/trademarks'
+  
+  try {
+    // Search active trademarks - correct API endpoint format
+    const searchUrl = `${MARKER_API_URL}/trademark/${encodeURIComponent(term)}/status/active/start/0/username/${username}/password/${password}`
+    
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid Marker API credentials - check your username/password')
+      }
+      throw new Error(`Trademark API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+      // Check for exact or very close matches
+      const exactMatches = data.results.filter((tm: any) => 
+        tm.mark && tm.mark.toLowerCase().replace(/[^a-z0-9]/g, '') === term.toLowerCase().replace(/[^a-z0-9]/g, '')
+      )
+      
+      if (exactMatches.length > 0) {
+        return { hasConflict: true, severity: 'severe' }
+      }
+      
+      // Check for similar matches
+      const similarMatches = data.results.filter((tm: any) => 
+        tm.mark && (tm.mark.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(tm.mark.toLowerCase()))
+      )
+      
+      if (similarMatches.length > 0) {
+        return { hasConflict: true, severity: 'warning' }
+      }
+    }
+    
+    return { hasConflict: false, severity: 'clear' }
+  } catch (error) {
+    console.warn('Error checking trademarks:', error)
+    throw error // Re-throw so caller can handle appropriately
+  }
+}
+
+function assessStaticLegalRisk(domainName: string): { flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number } {
+  // Enhanced static brand list (keeping as fallback)
+  const ENHANCED_LEGAL_BRANDS = [
+    ...LEGAL_BRANDS,
+    'chatgpt', 'openai', 'anthropic', 'claude', 'midjourney', 'stability',
+    'binance', 'coinbase', 'kraken', 'ftx', 'ethereum', 'polygon',
+    'shopify', 'etsy', 'walmart', 'target', 'bestbuy', 'macys',
+    'booking', 'expedia', 'marriott', 'hilton', 'hyatt', 'airbnb'
+  ]
+  
   // Check for exact matches
-  for (const brand of LEGAL_BRANDS) {
-    if (domainName === brand || domainName === brand + 's' || domainName === brand + 'app' || domainName === brand + 'api') {
+  for (const brand of ENHANCED_LEGAL_BRANDS) {
+    if (domainName === brand || domainName === brand + 's' || domainName === brand + 'app' || domainName === brand + 'api' || domainName === brand + 'pro') {
       return { flag: 'severe', multiplier: 0, score: 0 }
     }
   }
   
   // Check for substring matches
-  for (const brand of LEGAL_BRANDS) {
+  for (const brand of ENHANCED_LEGAL_BRANDS) {
     if (domainName.includes(brand) && brand.length >= 4) {
       return { flag: 'warning', multiplier: 0.5, score: 25 }
     }
@@ -290,17 +536,17 @@ export async function evaluateDomain(
   const industryScore = scoreIndustryRelevance(keywordResult.industry, keywordResult.keywords)
   
   // Load comparable sales
-  const comparables = findComparables(domain, 5)
+  const comparables = await findComparables(domain, 5)
   const compsScore = scoreComparableSales(domain, comparables)
-  const ageScore = scoreAge(domain, options.domainAge)
-  const trafficScore = scoreTraffic(domain, options.userTraffic)
+  const ageResult = await scoreDomainAge(domain, options.domainAge)
+  const trafficResult = await scoreDomainTraffic(domain, options.userTraffic)
   const liquidityScore = scoreLiquidity(domain)
   
   // Get AI brandability score
   const brandabilityResult = await analyzeBrandability(domain)
   
   // Assess legal risk
-  const legalRisk = assessLegalRisk(domain)
+  const legalRisk = await assessLegalRisk(domain)
   
   // Calculate weighted score
   const breakdown: FactorBreakdown[] = [
@@ -310,8 +556,8 @@ export async function evaluateDomain(
     { factor: 'brandability', score: brandabilityResult.score, weight: weights.brandability, contribution: weights.brandability * brandabilityResult.score },
     { factor: 'industry', score: industryScore, weight: weights.industry, contribution: weights.industry * industryScore },
     { factor: 'comps', score: compsScore, weight: weights.comps, contribution: weights.comps * compsScore },
-    { factor: 'age', score: ageScore, weight: weights.age, contribution: weights.age * ageScore },
-    { factor: 'traffic', score: trafficScore, weight: weights.traffic, contribution: weights.traffic * trafficScore },
+    { factor: 'age', score: ageResult.score, weight: weights.age, contribution: weights.age * ageResult.score },
+    { factor: 'traffic', score: trafficResult.score, weight: weights.traffic, contribution: weights.traffic * trafficResult.score },
     { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore },
     { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` }
   ]
@@ -320,8 +566,9 @@ export async function evaluateDomain(
   const finalScore = rawScore * legalRisk.multiplier
   
   // Calculate price estimate with comps median
+  const sortedComparables = [...comparables].sort((a, b) => a.soldPrice - b.soldPrice)
   const compsMedian = comparables.length > 0 
-    ? comparables.sort((a, b) => a.soldPrice - b.soldPrice)[Math.floor(comparables.length / 2)].soldPrice
+    ? sortedComparables[Math.floor(sortedComparables.length / 2)].soldPrice
     : undefined
     
   const priceEstimate = calculatePriceEstimate(finalScore, compsMedian)
