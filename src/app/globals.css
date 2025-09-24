@@ -77,8 +77,8 @@
   
   .card {
     background-color: #f8f9ff;
-    border: 2px solid #2323FF;
-    border-radius: 1rem;
+    border: 2px solid #2323ff;
+    border-radius: 0.5rem;
     padding: 1.5rem;
     letter-spacing: -1px;
   }
@@ -86,7 +86,7 @@
   .factor-bar {
     background-color: rgb(255, 255, 255, 0.2);
     border-radius: 9999px;
-    height: 0.7rem;
+    height: 0.8rem;
     width: 100%;
     border: 1px solid #2323FF;
   }
@@ -100,7 +100,6 @@
   
   .retro-header {
     color: #2323FF;
-    padding: 1rem 1.5rem;
     border-radius: 0.5rem 0.5rem 0 0;
     font-weight: bold;
     letter-spacing: -2px;
