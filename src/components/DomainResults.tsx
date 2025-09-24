@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Download, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { Download, Alert, Check, Close } from '@nsmr/pixelart-react'
 import type { DomainAppraisal } from '../types'
 
 interface DomainResultsProps {
@@ -12,13 +12,13 @@ export default function DomainResults({ result }: DomainResultsProps) {
   const getLegalIcon = () => {
     switch (result.legalFlag) {
       case 'clear':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
+        return <Check className="h-5 w-5 text-green-500" />
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />
+        return <Alert className="h-5 w-5 text-yellow-500" />
       case 'severe':
-        return <XCircle className="h-5 w-5 text-red-500" />
+        return <Close className="h-5 w-5 text-red-500" />
       default:
-        return <AlertTriangle className="h-5 w-5 text-gray-500" />
+        return <Alert className="h-5 w-5 text-gray-500" />
     }
   }
 

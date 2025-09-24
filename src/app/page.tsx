@@ -7,10 +7,10 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-brand-primary mb-2">
-            Domain Value Estimator
+            Domainosaur
           </h1>
           <p className="text-brand-secondary text-sm">
-            AI-powered domain valuation using 10 core factors
+            World's best domain valuator - using 10 core factors
           </p>
         </div>
         <DomainEvaluator />

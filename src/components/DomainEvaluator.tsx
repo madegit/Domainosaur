@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Reload } from '@nsmr/pixelart-react'
 import type { DomainAppraisal } from '../types'
 import DomainResults from './DomainResults'
 
@@ -89,7 +89,7 @@ export default function DomainEvaluator() {
               className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Reload className="h-4 w-4 animate-spin" />
               ) : (
                 <Search className="h-4 w-4" />
               )}
