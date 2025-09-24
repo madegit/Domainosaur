@@ -225,6 +225,24 @@ font-style: italic;
   .static {
     position: static;
   }
+  .container {
+    width: 100%;
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
   .mx-auto {
     margin-inline: auto;
   }
@@ -375,6 +393,9 @@ font-style: italic;
   .bg-brand-primary {
     background-color: var(--color-brand-primary);
   }
+  .bg-brand-surface {
+    background-color: var(--color-brand-surface);
+  }
   .bg-white {
     background-color: var(--color-white);
   }
@@ -384,8 +405,14 @@ font-style: italic;
   .p-4 {
     padding: calc(var(--spacing) * 4);
   }
+  .px-4 {
+    padding-inline: calc(var(--spacing) * 4);
+  }
   .py-2 {
     padding-block: calc(var(--spacing) * 2);
+  }
+  .py-8 {
+    padding-block: calc(var(--spacing) * 8);
   }
   .text-center {
     text-align: center;
