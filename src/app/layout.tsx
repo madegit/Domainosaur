@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${azeretMono.variable} font-mono bg-brand-background text-brand-primary min-h-screen`}>
+      <body className={`${azeretMono.className} bg-brand-background text-brand-primary min-h-screen`}>
         {children}
         <Analytics />
       </body>

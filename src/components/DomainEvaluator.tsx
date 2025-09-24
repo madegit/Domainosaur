@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Search, Reload } from '@nsmr/pixelart-react'
+import { Search, Reload, Check, Alert, Download } from '@nsmr/pixelart-react'
 import type { DomainAppraisal } from '../types'
 import DomainResults from './DomainResults'
 
@@ -69,9 +69,14 @@ export default function DomainEvaluator() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="card mb-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-6">
+      <div className="card">
+        <div className="retro-header flex items-center gap-3 mb-4">
+          <Check className="h-6 w-6" />
+          <span className="text-lg font-bold">DOMAIN ANALYSIS</span>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -86,25 +91,35 @@ export default function DomainEvaluator() {
             <button
               type="submit"
               disabled={loading || searchCount >= 5}
-              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-fit"
             >
               {loading ? (
-                <Reload className="h-4 w-4 animate-spin" />
+                <Reload className="h-5 w-5 animate-spin" />
               ) : (
-                <Search className="h-4 w-4" />
+                <Search className="h-5 w-5" />
               )}
-              {loading ? 'Evaluating...' : 'Evaluate Domain'}
+              {loading ? 'ANALYZING...' : 'ANALYZE DOMAIN'}
             </button>
           </div>
           
-          <div className="flex justify-between items-center text-sm text-brand-secondary">
-            <span>Searches used: {searchCount}/5</span>
-            <span className="text-xs">Free evaluations without login</span>
+          <div className="bg-brand-primary text-white p-3 rounded flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Alert className="h-4 w-4" />
+              <span className="font-bold text-sm">USAGE: {searchCount}/5</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              <span className="text-xs">FREE TIER</span>
+            </div>
           </div>
           
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
-              {error}
+            <div className="card" style={{ backgroundColor: '#ff4444', borderColor: '#cc0000', color: 'white' }}>
+              <div className="flex items-center gap-2">
+                <Alert className="h-5 w-5" />
+                <span className="font-bold">ERROR:</span>
+              </div>
+              <p className="mt-2">{error}</p>
             </div>
           )}
         </form>

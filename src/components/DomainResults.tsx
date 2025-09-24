@@ -68,25 +68,33 @@ export default function DomainResults({ result }: DomainResultsProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="card">
+        <div className="retro-header flex items-center gap-3 mb-4">
+          <Alert className="h-6 w-6" />
+          <span className="text-lg font-bold">VALUATION RESULTS</span>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-brand-primary mb-2">
+            <h2 className="text-3xl font-bold text-brand-primary mb-2">
               {result.domain}
             </h2>
-            <p className="text-lg text-brand-secondary">
-              Estimated Value: {result.priceEstimate.investor} - {result.priceEstimate.retail}
-            </p>
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-brand-secondary">Score:</span>
-              <div className="text-2xl font-bold text-brand-primary">
-                {result.finalScore.toFixed(1)}/100
-              </div>
+            <div className="flex items-center gap-2 text-lg">
+              <Alert className="h-5 w-5 text-brand-primary" />
+              <span className="font-bold text-brand-primary">
+                {result.priceEstimate.investor} - {result.priceEstimate.retail}
+              </span>
             </div>
-            <div className="bg-gray-200 rounded-full h-3 w-32">
+          </div>
+          <div className="bg-brand-primary text-white p-4 rounded">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="h-5 w-5" />
+              <span className="text-sm font-bold">FINAL SCORE</span>
+            </div>
+            <div className="text-3xl font-bold text-center">
+              {result.finalScore.toFixed(1)}/100
+            </div>
+            <div className="factor-bar mt-2">
               <div 
-                className="factor-progress h-3"
+                className="factor-progress"
                 style={{ width: `${result.finalScore}%` }}
               />
             </div>
@@ -96,22 +104,28 @@ export default function DomainResults({ result }: DomainResultsProps) {
 
       {/* AI Commentary */}
       <div className="card">
-        <h3 className="text-lg font-semibold mb-3">AI Analysis</h3>
-        <p className="text-brand-secondary text-sm leading-relaxed">
+        <div className="retro-header flex items-center gap-3 mb-4">
+          <Alert className="h-6 w-6" />
+          <span className="text-lg font-bold">AI ANALYSIS</span>
+        </div>
+        <p className="text-brand-primary font-medium leading-relaxed">
           {result.aiComment}
         </p>
       </div>
 
       {/* Factor Breakdown */}
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Valuation Factors</h3>
+        <div className="retro-header flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Check className="h-6 w-6" />
+            <span className="text-lg font-bold">VALUATION FACTORS</span>
+          </div>
           <button
             onClick={downloadReport}
-            className="btn-primary text-xs flex items-center gap-1"
+            className="btn-primary text-xs flex items-center gap-1 bg-white text-brand-primary border-brand-primary hover:bg-brand-surface"
           >
-            <Download className="h-3 w-3" />
-            PDF Report
+            <Download className="h-4 w-4" />
+            DOWNLOAD PDF
           </button>
         </div>
         
@@ -145,11 +159,14 @@ export default function DomainResults({ result }: DomainResultsProps) {
 
       {/* Legal Status */}
       <div className="card">
+        <div className="retro-header flex items-center gap-3 mb-4">
+          <Alert className="h-6 w-6" />
+          <span className="text-lg font-bold">LEGAL STATUS</span>
+        </div>
         <div className="flex items-center gap-3">
           {getLegalIcon()}
           <div>
-            <h3 className="text-lg font-semibold">Legal Status</h3>
-            <p className="text-sm text-brand-secondary">
+            <p className="text-brand-primary font-medium">
               {getLegalText()}
             </p>
           </div>
