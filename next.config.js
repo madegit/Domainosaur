@@ -8,6 +8,8 @@ const nextConfig = {
   allowedDevOrigins: [
     '*.replit.dev',
     '*.repl.co',
+    '*.spock.replit.dev',
+    '095b7487-720f-42ad-9d4a-b2f5dba75e5d-00-ippnmf5i1srl.spock.replit.dev',
     '127.0.0.1',
     'localhost',
     '0.0.0.0'
