@@ -16,10 +16,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Domain Evaluator App"
+args = "Next.js Dev Server"
 
 [[workflows.workflow]]
-name = "Domain Evaluator App"
+name = "Next.js Dev Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
@@ -33,10 +33,6 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 40711
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
