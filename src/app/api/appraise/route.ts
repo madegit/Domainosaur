@@ -6,9 +6,13 @@ import '../../../app/startup' // Ensure database is initialized
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-    const rateLimit = checkRateLimit(ip)
+    // Rate limiting - get client IP with proper fallback and additional security
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 
+               request.headers.get('x-real-ip') || 
+               'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+    const rateLimit = checkRateLimit(ip, userAgent)
     
     if (!rateLimit.allowed) {
       return NextResponse.json(

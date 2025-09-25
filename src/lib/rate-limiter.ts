@@ -1,15 +1,23 @@
-// Simple in-memory rate limiter for 5 searches per IP
+// Enhanced rate limiter with IP validation and session tracking
 interface RateLimitEntry {
   count: number
+  resetTime: number
+  lastUserAgent?: string
+}
+
+interface SessionRateLimit {
+  sessionCount: number
   resetTime: number
 }
 
 const rateLimitMap = new Map<string, RateLimitEntry>()
-// Use environment variables or default to stricter limits for free users
-const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_REQUESTS || '3', 10)
+const sessionLimitMap = new Map<string, SessionRateLimit>()
+// Use environment variables or default to 5 requests (matching frontend)
+const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_REQUESTS || '5', 10)
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW || '3600', 10) * 1000 // Convert seconds to milliseconds
 
-export function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
+// Enhanced rate limiting with IP validation and session support
+export function checkRateLimit(ip: string, userAgent?: string, sessionId?: string): { allowed: boolean; remaining: number; resetTime: number } {
   const now = Date.now()
   const entry = rateLimitMap.get(ip)
   
