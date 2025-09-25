@@ -4,7 +4,7 @@ import { Downasaur, Coin, Heart } from "@nsmr/pixelart-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-brand-surface">
+    <main className="min-h-screen bg-brand-surface min-h-[100vh]">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-brand-primary tracking-tigher mb-2 flex items-center justify-center gap-2">
