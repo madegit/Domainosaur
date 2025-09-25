@@ -37,9 +37,23 @@ async function performInit() {
         comps JSONB DEFAULT '[]',
         legal_flag VARCHAR(10) DEFAULT 'clear',
         ai_comment TEXT,
+        whois_data JSONB NULL,
+        options_hash VARCHAR(32) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         user_id VARCHAR(255) NULL
       )
+    `)
+    
+    // Add whois_data column to existing tables if it doesn't exist
+    await client.query(`
+      ALTER TABLE appraisals 
+      ADD COLUMN IF NOT EXISTS whois_data JSONB NULL
+    `)
+    
+    // Add options_hash column to existing tables if it doesn't exist  
+    await client.query(`
+      ALTER TABLE appraisals 
+      ADD COLUMN IF NOT EXISTS options_hash VARCHAR(32) NULL
     `)
     
     // Note: Only creating appraisals table - comps are stored in appraisals.comps JSONB

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Alert, Check, Close } from "@nsmr/pixelart-react";
+import { Download, Analytics, Check, Close, Scale, Dollar } from "@nsmr/pixelart-react";
 import type { DomainAppraisal } from "../types";
 
 interface DomainResultsProps {
@@ -14,11 +14,11 @@ export default function DomainResults({ result }: DomainResultsProps) {
       case "clear":
         return <Check className="h-5 w-5 text-green-500" />;
       case "warning":
-        return <Alert className="h-5 w-5 text-yellow-500" />;
+        return <Scale className="h-5 w-5 text-yellow-500" />;
       case "severe":
         return <Close className="h-5 w-5 text-red-500" />;
       default:
-        return <Alert className="h-5 w-5 text-gray-500" />;
+        return <Scale className="h-5 w-5 text-gray-500" />;
     }
   };
 
@@ -69,7 +69,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* Header */}
       <div className="card">
         <div className="retro-header flex items-cente">
-          <Alert className="h-6 w-6 mr-2" />
+          <Analytics className="h-6 w-6 mr-2" />
           <span className="text-lg font-bold">VALUATION RESULTS</span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -78,7 +78,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
               {result.domain}
             </h2>
             <div className="flex items-center gap-2 text-lg">
-              <Alert className="h-5 w-5 text-brand-primary" />
+              <Dollar className="h-5 w-5 text-brand-primary" />
               <span className="font-bold text-brand-primary">
                 {result.priceEstimate.investor} - {result.priceEstimate.retail}
               </span>
@@ -105,7 +105,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* AI Commentary */}
       <div className="card">
         <div className="retro-header flex items-center gap-3 mb-4">
-          <Alert className="h-6 w-6" />
+          <Analytics className="h-6 w-6" />
           <span className="text-lg font-bold">AI ANALYSIS</span>
         </div>
         <p className="text-brand-primary font-medium leading-relaxed">
@@ -160,7 +160,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* Legal Status */}
       <div className="card">
         <div className="retro-header flex items-center gap-3 mb-4">
-          <Alert className="h-6 w-6" />
+          <Scale className="h-6 w-6" />
           <span className="text-lg font-bold">LEGAL STATUS</span>
         </div>
         <div className="flex items-center gap-3">

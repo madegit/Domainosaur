@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Reload, Check, Alert, Download } from "@nsmr/pixelart-react";
+import { Search, Reload, Check, Analytics, Download } from "@nsmr/pixelart-react";
 import type { DomainAppraisal } from "../types";
 import DomainResults from "./DomainResults";
 
