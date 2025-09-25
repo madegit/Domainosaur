@@ -110,13 +110,36 @@ export const industryKeywords: IndustryKeyword[] = [
 ]
 
 export function findKeywordValue(domain: string): { score: number; industry: string; matchedKeywords: string[] } {
-  const domainLower = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz)$/, '')
+  const domainLower = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
+  
+  // Tokenize domain name for better matching
+  const tokens = domainLower.split(/[-_0-9]+/).filter(token => token.length > 0)
+  const fullDomain = domainLower
+  
   let bestScore = 20 // Default score for no meaningful keywords
   let bestIndustry = 'generic'
   let matchedKeywords: string[] = []
   
   for (const item of industryKeywords) {
-    if (domainLower.includes(item.keyword)) {
+    let matched = false
+    
+    // Check for exact token match (preferred)
+    if (tokens.includes(item.keyword)) {
+      matched = true
+    }
+    // Check for exact full domain match
+    else if (fullDomain === item.keyword || fullDomain === item.keyword + 's') {
+      matched = true
+    }
+    // For keywords >= 4 chars, allow substring matching at word boundaries
+    else if (item.keyword.length >= 4) {
+      const wordBoundaryRegex = new RegExp(`\\b${item.keyword}\\b`)
+      if (wordBoundaryRegex.test(fullDomain)) {
+        matched = true
+      }
+    }
+    
+    if (matched) {
       matchedKeywords.push(item.keyword)
       if (item.value > bestScore) {
         bestScore = item.value

@@ -70,7 +70,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       <div className="card">
         <div className="retro-header flex items-cente">
           <Alert className="h-6 w-6 mr-2" />
-          <span className="text-lg font-bold">Valuation Result</span>
+          <span className="text-lg font-bold">VALUATION RESULTS</span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

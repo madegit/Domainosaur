@@ -373,17 +373,29 @@ function assessStaticLegalRisk(domainName: string): { flag: 'clear' | 'warning' 
     'booking', 'expedia', 'marriott', 'hilton', 'hyatt', 'airbnb'
   ]
   
-  // Check for exact matches
+  // Check for exact matches - severe risk
   for (const brand of ENHANCED_LEGAL_BRANDS) {
-    if (domainName === brand || domainName === brand + 's' || domainName === brand + 'app' || domainName === brand + 'api' || domainName === brand + 'pro') {
+    if (domainName === brand) {
       return { flag: 'severe', multiplier: 0, score: 0 }
     }
   }
   
-  // Check for substring matches
+  // Check for brand + common suffixes - warning only (not severe)
   for (const brand of ENHANCED_LEGAL_BRANDS) {
-    if (domainName.includes(brand) && brand.length >= 4) {
-      return { flag: 'warning', multiplier: 0.5, score: 25 }
+    if (domainName === brand + 's' || domainName === brand + 'app' || 
+        domainName === brand + 'api' || domainName === brand + 'pro' ||
+        domainName === brand + 'hub' || domainName === brand + 'store') {
+      return { flag: 'warning', multiplier: 0.7, score: 40 }
+    }
+  }
+  
+  // Check for word boundary matches (avoid false positives like "evisa")
+  for (const brand of ENHANCED_LEGAL_BRANDS) {
+    if (brand.length >= 5) { // Only check longer brands to avoid common words
+      const wordBoundaryRegex = new RegExp(`\\b${brand}\\b`)
+      if (wordBoundaryRegex.test(domainName)) {
+        return { flag: 'warning', multiplier: 0.6, score: 30 }
+      }
     }
   }
   
@@ -391,16 +403,17 @@ function assessStaticLegalRisk(domainName: string): { flag: 'clear' | 'warning' 
 }
 
 export function mapScoreToPriceBracket(score: number): { min: number; max: number; bracket: string } {
+  // Recalibrated price brackets to reflect realistic market values
   if (score >= 80) {
-    return { min: 100000, max: 5000000, bracket: '80-100' }
+    return { min: 5000, max: 50000, bracket: '80-100' }
   } else if (score >= 60) {
-    return { min: 10000, max: 100000, bracket: '60-80' }
+    return { min: 1000, max: 5000, bracket: '60-80' }
   } else if (score >= 40) {
-    return { min: 1500, max: 10000, bracket: '40-60' }
+    return { min: 300, max: 1000, bracket: '40-60' }
   } else if (score >= 20) {
-    return { min: 500, max: 1500, bracket: '20-40' }
+    return { min: 100, max: 300, bracket: '20-40' }
   } else {
-    return { min: 50, max: 500, bracket: '0-20' }
+    return { min: 25, max: 100, bracket: '0-20' }
   }
 }
 
