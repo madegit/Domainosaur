@@ -7,11 +7,11 @@ import './globals.css'
 const azeretMono = localFont({
   src: [
     {
-      path: '../public/fonts/AzeretMono-VariableFont_wght.ttf',
+      path: '../../public/fonts/AzeretMono-VariableFont_wght.ttf',
       style: 'normal',
     },
     {
-      path: '../public/fonts/AzeretMono-Italic-VariableFont_wght.ttf', 
+      path: '../../public/fonts/AzeretMono-Italic-VariableFont_wght.ttf', 
       style: 'italic',
     },
   ],
@@ -20,7 +20,7 @@ const azeretMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Domain Value Estimator',
+  title: 'Domainosaur - World&apos;s Best Domain Value Estimator',
   description: 'AI-powered domain valuation using 10 core factors',
 }
 

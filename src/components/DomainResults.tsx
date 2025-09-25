@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Analytics, Check, Close, Scale, Dollar } from "@nsmr/pixelart-react";
+import { Download, Analytics, Check, Close, Scale, Dollar, Coin, Calculator, Trophy, Teach, Checklist, Anchor } from "@nsmr/pixelart-react";
 import type { DomainAppraisal } from "../types";
 
 interface DomainResultsProps {
@@ -69,7 +69,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* Header */}
       <div className="card">
         <div className="retro-header flex items-cente">
-          <Analytics className="h-6 w-6 mr-2" />
+          <Trophy className="h-6 w-6 mr-2" />
           <span className="text-lg font-bold">VALUATION RESULTS</span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -105,7 +105,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* AI Commentary */}
       <div className="card">
         <div className="retro-header flex items-center gap-3 mb-4">
-          <Analytics className="h-6 w-6" />
+          <Teach className="h-6 w-6" />
           <span className="text-lg font-bold">AI ANALYSIS</span>
         </div>
         <p className="text-brand-primary font-medium leading-relaxed">
@@ -117,7 +117,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       <div className="card">
         <div className="retro-header flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Check className="h-6 w-6" />
+            <Checklist className="h-6 w-6" />
             <span className="text-lg font-bold">VALUATION FACTORS</span>
           </div>
           <button
@@ -160,7 +160,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
       {/* Legal Status */}
       <div className="card">
         <div className="retro-header flex items-center gap-3 mb-4">
-          <Scale className="h-6 w-6" />
+          <Anchor className="h-6 w-6" />
           <span className="text-lg font-bold">LEGAL STATUS</span>
         </div>
         <div className="flex items-center gap-3">
