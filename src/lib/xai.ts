@@ -7,9 +7,9 @@ let openai: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
-    const apiKey = process.env.XAI_API_KEY;
+    const apiKey = process.env.AI_API_KEY;
     if (!apiKey) {
-      throw new Error("XAI_API_KEY environment variable is not set");
+      throw new Error("AI_API_KEY environment variable is not set");
     }
     openai = new OpenAI({ 
       baseURL: "https://api.x.ai/v1", 
