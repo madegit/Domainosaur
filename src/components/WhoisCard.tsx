@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Analytics, Check, Close, Scale, Trophy, Download } from "@nsmr/pixelart-react";
+import { Analytics, Check, Close, Scale, Trophy, Download, Search } from "@nsmr/pixelart-react";
 import type { WhoisData } from "../types";
 
 interface WhoisCardProps {
@@ -54,17 +54,10 @@ export default function WhoisCard({ whoisData }: WhoisCardProps) {
   return (
     <div className="card">
       <div className="retro-header flex items-center gap-3 mb-4">
-        <Analytics className="h-6 w-6" />
-        <span className="text-lg font-bold">DOMAIN REGISTRATION</span>
-        <div className={`ml-auto px-3 py-1 rounded text-xs font-bold ${
-          whoisData.isAvailable 
-            ? 'bg-green-100 text-green-800 border border-green-300' 
-            : 'bg-red-100 text-red-800 border border-red-300'
-        }`}>
-          {getAvailabilityStatus()}
-        </div>
+        <Search className="h-6 w-6" />
+        <span className="text-lg font-bold">DOMAIN AVAILABILITY </span>
+  
       </div>
-
       {/* Availability Status */}
       <div className="flex items-center gap-3 mb-6 p-3 bg-brand-surface rounded border-2 border-brand-primary/20">
         {getAvailabilityIcon()}

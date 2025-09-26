@@ -114,8 +114,7 @@ export default function DomainResults({ result }: DomainResultsProps) {
         </p>
       </div>
 
-      {/* Whois Data Card */}
-      {result.whoisData && <WhoisCard whoisData={result.whoisData} />}
+     
 
       {/* Factor Breakdown */}
       <div className="card">
@@ -160,6 +159,11 @@ export default function DomainResults({ result }: DomainResultsProps) {
           ))}
         </div>
       </div>
+
+      {/* Whois Data Card */}
+      {result.whoisData && <WhoisCard whoisData={result.whoisData} />}
+      
+
 
       {/* Legal Status */}
       <div className="card">
