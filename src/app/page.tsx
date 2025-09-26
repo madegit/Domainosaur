@@ -7,7 +7,7 @@ export default function Home() {
     <main className="min-h-screen bg-brand-surface min-h-[100vh]">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-brand-primary tracking-tighter mb-2 flex items-center justify-center gap-2">
+          <h1 className="text-2xl font-bold text-brand-primary tracking-tighter mb-2 flex items-center justify-center gap-2">
             <Downasaur className="h-6 w-6" />
             Domainosaurr
           </h1>
