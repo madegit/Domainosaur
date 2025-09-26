@@ -7,12 +7,12 @@ export default function Home() {
     <main className="min-h-screen bg-brand-surface min-h-[100vh]">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-primary tracking-tigher mb-2 flex items-center justify-center gap-2">
+          <h1 className="text-2xl font-semibold text-brand-primary tracking-tighter mb-2 flex items-center justify-center gap-2">
             <Downasaur className="h-6 w-6" />
-            Domainosaur
+            Domainosaurr
           </h1>
           <p className="text-brand-secondary text-sm">
-            World's best domain valuator - using 10 core factors
+            World's best domain valuator <br/>Using 10 core factors
           </p>
         </div>
         <DomainEvaluator />
@@ -40,7 +40,7 @@ export default function Home() {
             </a>
           </p>
           <p className="text-brand-secondary text-xs">
-            © 2025 Domainosaur - All rights reserved.
+            © 2025 Domainosaurr - All rights reserved.
           </p>
         </div>
       </footer>

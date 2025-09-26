@@ -384,29 +384,85 @@ export async function generateRealisticComparables(domain: string, limit: number
 // Fallback functions for when AI analysis is unavailable
 function analyzeBrandabilityFallback(domain: string): BrandabilityResult {
   const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
+  const tld = domain.split('.').pop()?.toLowerCase() || 'com'
   const length = domainName.length
+  
+  // Advanced brandability analysis
   const hasHyphen = domainName.includes('-')
   const hasNumber = /\d/.test(domainName)
-  const isPronounceable = !/[xyz]{2,}|[qwrtypsdfghjklzxcvbnm]{4,}/i.test(domainName)
+  const hasSpecialChars = /[^a-z0-9\-]/.test(domainName)
+  const vowelCount = (domainName.match(/[aeiou]/g) || []).length
+  const consonantCount = domainName.length - vowelCount
+  const vowelRatio = vowelCount / domainName.length
   
-  let score = 60 // Base score
+  // Check for difficult consonant clusters
+  const hardConsonants = domainName.match(/[qxzjk]{2,}|[bcdfghjklmnpqrstvwxyz]{4,}/g)
+  const isPronounceable = !hardConsonants && vowelRatio >= 0.2 && vowelRatio <= 0.6
   
-  // Length scoring
-  if (length <= 6) score += 20
-  else if (length <= 8) score += 10
-  else if (length >= 12) score -= 15
+  // Check for brandable patterns
+  const hasDoubleLetters = /(.)\1/.test(domainName)
+  const endsWith_ly_er_ed = /(?:ly|er|ed|ing|tion)$/.test(domainName)
+  const hasCommonPrefixes = /^(?:un|re|pre|anti|auto|co|de|dis|ex|il|im|in|ir|inter|mega|micro|mid|mis|non|over|out|post|pre|pro|sub|super|trans|ultra|under)/.test(domainName)
   
-  // Composition penalties
-  if (hasHyphen) score -= 15
-  if (hasNumber) score -= 10
-  if (!isPronounceable) score -= 20
+  // Industry relevance keywords
+  const brandableKeywords = [
+    'tech', 'app', 'web', 'net', 'smart', 'pro', 'max', 'plus', 'prime', 'elite', 'ace', 'zen', 'flex', 'swift', 'cloud', 'hub', 'lab', 'studio', 'works', 'corp', 'inc'
+  ]
+  const hasIndustryKeywords = brandableKeywords.some(keyword => domainName.includes(keyword))
   
-  // TLD bonus
-  if (domain.endsWith('.com')) score += 10
+  let score = 65 // Improved base score
   
-  score = Math.max(20, Math.min(85, score))
+  // Length optimization (sweet spot is 4-8 characters)
+  if (length >= 4 && length <= 6) score += 25
+  else if (length === 7 || length === 8) score += 15
+  else if (length === 3) score += 10
+  else if (length >= 9 && length <= 11) score -= 5
+  else if (length >= 12) score -= 20
+  else if (length <= 2) score -= 30
   
-  const commentary = `${domainName} is a ${length}-character domain ${hasHyphen ? 'with hyphens' : 'without hyphens'}. ${isPronounceable ? 'Generally pronounceable' : 'May be difficult to pronounce'}. Brandability assessed using algorithmic analysis.`
+  // Composition analysis
+  if (hasHyphen) score -= 20
+  if (hasNumber && length <= 8) score -= 8 // Numbers less bad in short domains
+  else if (hasNumber) score -= 15
+  if (hasSpecialChars) score -= 25
+  if (!isPronounceable) score -= 25
+  if (hasDoubleLetters && length <= 8) score += 5 // Can be memorable
+  
+  // Advanced brandability factors
+  if (endsWith_ly_er_ed) score += 8 // Natural word endings
+  if (hasCommonPrefixes) score += 5 // Familiar prefixes
+  if (hasIndustryKeywords) score += 12 // Industry relevance
+  
+  // TLD premium scoring
+  const tldScores: Record<string, number> = {
+    'com': 20, 'net': 8, 'org': 6, 'io': 15, 'ai': 12, 'co': 10, 
+    'app': 8, 'tech': 6, 'dev': 5, 'me': 4, 'tv': 3, 'cc': 2
+  }
+  score += tldScores[tld] || -5
+  
+  // Ensure realistic scoring range
+  score = Math.max(15, Math.min(90, score))
+  
+  // Generate professional commentary
+  let commentary = `${domainName.toUpperCase()} analysis: `
+  
+  if (length <= 6) commentary += `Excellent ${length}-character length for memorability. `
+  else if (length <= 8) commentary += `Good ${length}-character length with strong recall potential. `
+  else if (length <= 12) commentary += `Moderate ${length}-character length, still manageable. `
+  else commentary += `Long ${length}-character domain may impact memorability. `
+  
+  if (!hasHyphen && !hasNumber) commentary += `Clean alphabetic composition enhances professionalism. `
+  else if (hasHyphen) commentary += `Hyphenation reduces brandability and creates typing friction. `
+  else if (hasNumber) commentary += `Numeric elements may impact brand coherence. `
+  
+  if (isPronounceable) commentary += `Phonetically accessible for verbal marketing. `
+  else commentary += `Complex phonetics may challenge verbal transmission. `
+  
+  const tldQuality = tldScores[tld] || 0
+  if (tldQuality >= 15) commentary += `Premium .${tld.toUpperCase()} extension adds significant brand value.`
+  else if (tldQuality >= 8) commentary += `Solid .${tld.toUpperCase()} extension with good market acceptance.`
+  else if (tldQuality >= 0) commentary += `Standard .${tld.toUpperCase()} extension with basic market recognition.`
+  else commentary += `Alternative .${tld.toUpperCase()} extension may require additional brand building.`
   
   return { score, commentary }
 }
@@ -416,32 +472,121 @@ function estimateTrafficFallback(domain: string): TrafficEstimate {
   const tld = domain.split('.').pop()?.toLowerCase() || 'com'
   const length = domainName.length
   
-  let monthlyTraffic = 50 // Base traffic
+  // More sophisticated traffic estimation based on domain characteristics
+  let baseTraffic = 25 // Conservative base for unmarketed domains
   
-  // Length-based traffic estimation
-  if (length <= 6) monthlyTraffic = 500
-  else if (length <= 8) monthlyTraffic = 200
-  else if (length <= 12) monthlyTraffic = 100
-  else monthlyTraffic = 50
+  // Length-based traffic patterns (shorter = more direct navigation)
+  if (length <= 4) baseTraffic = 800  // Premium short domains get type-ins
+  else if (length <= 6) baseTraffic = 400
+  else if (length <= 8) baseTraffic = 150
+  else if (length <= 10) baseTraffic = 75
+  else if (length <= 12) baseTraffic = 40
+  else baseTraffic = 20 // Very long domains rarely get direct traffic
   
-  // TLD multiplier
-  const tldMultiplier = {
-    'com': 3.0,
-    'net': 1.5,
-    'org': 1.3,
-    'io': 1.2,
-    'ai': 1.1
-  }[tld] || 0.8
-  
-  monthlyTraffic = Math.round(monthlyTraffic * tldMultiplier)
-  
-  // Check for common keywords that might drive traffic
-  const highTrafficKeywords = ['shop', 'buy', 'sale', 'store', 'market', 'tech', 'app', 'game', 'news', 'blog']
-  if (highTrafficKeywords.some(keyword => domainName.includes(keyword))) {
-    monthlyTraffic *= 2
+  // TLD authority and trust factors
+  const tldMultipliers: Record<string, number> = {
+    'com': 4.5,  // Gold standard for direct navigation
+    'net': 2.2,  // Still strong for tech
+    'org': 1.8,  // Good for organizations
+    'io': 2.5,   // Tech industry standard
+    'ai': 2.0,   // Growing AI sector recognition
+    'co': 1.6,   // Decent alternative to .com
+    'app': 1.4,  // Mobile app association
+    'tech': 1.3, // Tech industry specific
+    'dev': 1.2,  // Developer focused
+    'me': 1.1,   // Personal branding
+    'tv': 1.0,   // Media/entertainment
+    'cc': 0.9,   // Generic alternative
+    'biz': 0.8,  // Business focused but limited adoption
+    'info': 0.7, // Information sites, lower navigation trust
+    'xyz': 0.6   // New gTLD, limited type-in traffic
   }
   
-  const explanation = `Estimated ${monthlyTraffic} monthly visits based on domain length (${length} chars), TLD authority (.${tld}), and basic keyword analysis. Conservative estimate without AI analysis.`
+  const tldMultiplier = tldMultipliers[tld] || 0.5 // Default for unknown TLDs
+  let monthlyTraffic = Math.round(baseTraffic * tldMultiplier)
+  
+  // High-value keyword categories with traffic multipliers
+  const trafficKeywords = {
+    // E-commerce keywords (high intent)
+    ecommerce: { keywords: ['shop', 'store', 'buy', 'sell', 'sale', 'cart', 'market', 'deal', 'price'], multiplier: 3.5 },
+    
+    // Tech/Software keywords (growing search volume)
+    tech: { keywords: ['app', 'software', 'tech', 'code', 'dev', 'api', 'cloud', 'data', 'ai', 'bot'], multiplier: 2.8 },
+    
+    // Finance keywords (high value traffic)
+    finance: { keywords: ['bank', 'pay', 'money', 'crypto', 'invest', 'finance', 'loan', 'credit'], multiplier: 3.2 },
+    
+    // Health/Medical keywords (strong search demand)
+    health: { keywords: ['health', 'medical', 'doctor', 'care', 'wellness', 'fitness', 'therapy'], multiplier: 2.5 },
+    
+    // Travel keywords (seasonal high volume)
+    travel: { keywords: ['travel', 'hotel', 'flight', 'trip', 'vacation', 'booking'], multiplier: 2.3 },
+    
+    // News/Media keywords (high repeat visitors)
+    media: { keywords: ['news', 'blog', 'media', 'tv', 'video', 'stream'], multiplier: 2.1 },
+    
+    // Gaming/Entertainment (engaging content)
+    gaming: { keywords: ['game', 'play', 'fun', 'entertainment', 'sport'], multiplier: 1.9 },
+    
+    // Real Estate (local search strong)
+    realestate: { keywords: ['real', 'estate', 'home', 'house', 'property', 'rent'], multiplier: 2.4 },
+    
+    // Education (stable search patterns)
+    education: { keywords: ['learn', 'education', 'course', 'study', 'school', 'training'], multiplier: 1.8 }
+  }
+  
+  // Apply keyword multipliers (taking the highest applicable)
+  let maxMultiplier = 1.0
+  let matchedCategory = ''
+  
+  for (const [category, data] of Object.entries(trafficKeywords)) {
+    if (data.keywords.some(keyword => domainName.includes(keyword))) {
+      if (data.multiplier > maxMultiplier) {
+        maxMultiplier = data.multiplier
+        matchedCategory = category
+      }
+    }
+  }
+  
+  monthlyTraffic = Math.round(monthlyTraffic * maxMultiplier)
+  
+  // Brandability factors affecting direct navigation
+  const hasHyphen = domainName.includes('-')
+  const hasNumber = /\d/.test(domainName)
+  
+  if (hasHyphen) monthlyTraffic = Math.round(monthlyTraffic * 0.6) // Hyphens reduce type-in traffic
+  if (hasNumber && length > 8) monthlyTraffic = Math.round(monthlyTraffic * 0.8) // Numbers in long domains are problematic
+  
+  // Dictionary word bonus (easier to remember and type)
+  const commonWords = ['app', 'web', 'shop', 'news', 'blog', 'tech', 'pro', 'max', 'plus', 'smart', 'fast', 'easy']
+  if (commonWords.includes(domainName)) {
+    monthlyTraffic = Math.round(monthlyTraffic * 1.5)
+  }
+  
+  // Ensure realistic floor and ceiling
+  monthlyTraffic = Math.max(10, Math.min(5000, monthlyTraffic))
+  
+  // Generate professional explanation
+  let explanation = `Traffic estimate: ${monthlyTraffic.toLocaleString()} monthly visits. `
+  
+  explanation += `Analysis factors: ${length}-character ${tld.toUpperCase()} domain `
+  
+  if (matchedCategory) {
+    explanation += `with ${matchedCategory} keywords (${maxMultiplier.toFixed(1)}x multiplier). `
+  } else {
+    explanation += `with generic content indicators. `
+  }
+  
+  if (tldMultiplier >= 3.0) explanation += `Premium TLD drives strong direct navigation. `
+  else if (tldMultiplier >= 2.0) explanation += `Good TLD supports type-in traffic. `
+  else if (tldMultiplier >= 1.0) explanation += `Standard TLD with moderate recognition. `
+  else explanation += `Alternative TLD may limit direct navigation. `
+  
+  if (hasHyphen || hasNumber) {
+    explanation += `Composition factors reduce memorability and type-in potential. `
+  }
+  
+  explanation += `Conservative estimate for unmarketed domain - actual traffic depends on content quality, marketing, and SEO optimization.`
   
   return { monthlyTraffic, explanation }
 }
@@ -458,7 +603,8 @@ function generateComparablesFallback(domain: string, limit: number = 5): Compara
   else if (length <= 12) basePrice = 400
   
   // TLD multiplier
-  const tldMultiplier = { 'com': 2.5, 'net': 1.5, 'org': 1.3, 'io': 1.8, 'ai': 2.0 }[tld] || 1.0
+  const tldMultipliers: Record<string, number> = { 'com': 2.5, 'net': 1.5, 'org': 1.3, 'io': 1.8, 'ai': 2.0 }
+  const tldMultiplier = tldMultipliers[tld] || 1.0
   basePrice = Math.round(basePrice * tldMultiplier)
   
   const comps: ComparableSale[] = []

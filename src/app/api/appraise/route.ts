@@ -18,10 +18,17 @@ export async function POST(request: NextRequest) {
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
-          error: 'Rate limit exceeded. You have reached the maximum of 5 evaluations per hour.',
+          error: 'Rate limit exceeded. You have reached the maximum of 3 evaluations per hour.',
           retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
         },
-        { status: 429 }
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '3',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimit.resetTime.toString()
+          }
+        }
       )
     }
     
@@ -120,6 +127,13 @@ export async function POST(request: NextRequest) {
     } else {
       console.log(`Cache hit: returning cached evaluation for ${cleanDomain}`)
     }
+
+    // Create response with rate limit headers
+    const headers = {
+      'X-RateLimit-Limit': '3',
+      'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+      'X-RateLimit-Reset': rateLimit.resetTime.toString()
+    }
     
     // Helper function to determine price bracket
     function getBracket(score: number): string {
@@ -130,11 +144,7 @@ export async function POST(request: NextRequest) {
       return "0-20"
     }
     
-    const response = NextResponse.json(appraisal)
-    response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString())
-    response.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString())
-    
-    return response
+    return NextResponse.json(appraisal, { headers })
   } catch (error) {
     console.error('Domain evaluation error:', error)
     return NextResponse.json(

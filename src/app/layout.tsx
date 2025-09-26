@@ -20,7 +20,7 @@ const azeretMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Domainosaur! - Worlds Best Domain Value Estimator',
+  title: 'Domainosaurr! - Worlds Best Domain Value Estimator',
   description: 'AI-powered domain valuation using 10 core factors',
 }
 

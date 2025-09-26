@@ -3,6 +3,7 @@
 import React from "react";
 import { Download, Analytics, Check, Close, Scale, Dollar, Coin, Calculator, Trophy, Teach, Checklist, Anchor } from "@nsmr/pixelart-react";
 import type { DomainAppraisal } from "../types";
+import WhoisCard from "./WhoisCard";
 
 interface DomainResultsProps {
   result: DomainAppraisal;
@@ -112,6 +113,9 @@ export default function DomainResults({ result }: DomainResultsProps) {
           {result.aiComment}
         </p>
       </div>
+
+      {/* Whois Data Card */}
+      {result.whoisData && <WhoisCard whoisData={result.whoisData} />}
 
       {/* Factor Breakdown */}
       <div className="card">

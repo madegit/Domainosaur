@@ -12,8 +12,8 @@ interface SessionRateLimit {
 
 const rateLimitMap = new Map<string, RateLimitEntry>()
 const sessionLimitMap = new Map<string, SessionRateLimit>()
-// Use environment variables or default to 5 requests (matching frontend)
-const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_REQUESTS || '5', 10)
+// Use environment variables or default to 3 requests (matching frontend)
+const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_REQUESTS || '3', 10)
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW || '3600', 10) * 1000 // Convert seconds to milliseconds
 
 // Enhanced rate limiting with IP validation and session support
