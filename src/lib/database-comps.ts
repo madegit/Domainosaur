@@ -29,17 +29,57 @@ export async function findDatabaseComparables(
       return []
     }
     
-    // Note: Temporarily returning empty array until domain_sales table is set up in Supabase
-    // The domain_sales table needs to be created in your Supabase project first
-    console.log('Database comparables feature temporarily disabled during Supabase migration')
-    return []
+    const supabase = await getSupabaseClient()
     
-    // TODO: Implement this when domain_sales table is available in Supabase
-    // You'll need to:
-    // 1. Create a domain_sales table in Supabase with the required columns
-    // 2. Import your domain sales data 
-    // 3. Create a custom RPC function for the complex query
-    // 4. Or break down the query into multiple Supabase API calls
+    // Calculate reasonable price range based on domain characteristics
+    const estimatedPriceRange = estimatePriceRange(targetInfo)
+    
+    // Get candidates using Supabase query
+    // We'll filter by similar characteristics and then calculate similarity
+    const { data: candidates, error } = await supabase
+      .from('domain_sales')
+      .select('date, domain, price, venue')
+      .gte('price', estimatedPriceRange.min)
+      .lte('price', estimatedPriceRange.max)
+      .gte('date', '2014-01-01') // Recent sales (last 10+ years)
+      .order('date', { ascending: false })
+      .limit(limit * 10) // Get more candidates to choose from
+    
+    if (error) {
+      console.error('Error querying domain sales:', error)
+      return []
+    }
+    
+    if (!candidates || candidates.length === 0) {
+      return []
+    }
+    
+    // Calculate similarity scores for each candidate
+    const comparables: ComparableSale[] = []
+    
+    for (const row of candidates) {
+      const candidateInfo = extractDomainInfo(row.domain)
+      if (!candidateInfo) continue
+      
+      const similarity = Math.round(calculateSimilarity(targetInfo, candidateInfo, weights))
+      
+      if (similarity >= 40) { // Only include reasonably similar domains
+        comparables.push({
+          domain: row.domain,
+          soldPrice: row.price,
+          soldDate: row.date,
+          source: `Database (${row.venue})`,
+          similarity: similarity
+        })
+      }
+    }
+    
+    // Sort by similarity and take top results
+    comparables.sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+    const finalComparables = comparables.slice(0, limit)
+    
+    console.log(`Found ${finalComparables.length} comparable domain sales for ${targetDomain}`)
+    return finalComparables
     
   } catch (error) {
     console.error('Error finding database comparables:', error)
@@ -226,26 +266,74 @@ function extractDomainInfo(domain: string): DomainInfo | null {
  */
 export async function getComparablesStats(): Promise<any> {
   try {
-    // Note: Returning default stats until domain_sales table is set up in Supabase
-    console.log('Comparables stats feature temporarily disabled during Supabase migration')
-    return {
-      total_records: 0,
-      unique_tlds: 0,
-      avg_price: 0,
-      oldest_sale: null,
-      newest_sale: null
+    const supabase = await getSupabaseClient()
+    
+    // Get total count and basic stats
+    const { count: totalRecords, error: countError } = await supabase
+      .from('domain_sales')
+      .select('*', { count: 'exact', head: true })
+    
+    if (countError) {
+      console.error('Error getting total count:', countError)
+      return getDefaultStats()
     }
     
-    // TODO: Implement this when domain_sales table is available in Supabase
+    // Get aggregated stats
+    const { data: statsData, error: statsError } = await supabase
+      .rpc('get_domain_sales_stats')
+    
+    if (statsError) {
+      // Fallback: get basic stats with separate queries
+      const { data: priceData } = await supabase
+        .from('domain_sales')
+        .select('price')
+        .order('price', { ascending: false })
+        .limit(1000)
+      
+      const { data: dateData } = await supabase
+        .from('domain_sales')
+        .select('date')
+        .order('date', { ascending: true })
+        .limit(1)
+      
+      const { data: latestDateData } = await supabase
+        .from('domain_sales')
+        .select('date')
+        .order('date', { ascending: false })
+        .limit(1)
+      
+      const avgPrice = priceData ? 
+        Math.round(priceData.reduce((sum, row) => sum + row.price, 0) / priceData.length) : 0
+      
+      return {
+        total_records: totalRecords || 0,
+        unique_tlds: 'N/A',
+        avg_price: avgPrice,
+        oldest_sale: dateData?.[0]?.date || null,
+        newest_sale: latestDateData?.[0]?.date || null
+      }
+    }
+    
+    return {
+      total_records: totalRecords || 0,
+      unique_tlds: statsData?.unique_tlds || 'N/A',
+      avg_price: Math.round(statsData?.avg_price || 0),
+      oldest_sale: statsData?.oldest_sale || null,
+      newest_sale: statsData?.newest_sale || null
+    }
     
   } catch (error) {
     console.error('Error getting comparables stats:', error)
-    return {
-      total_records: 0,
-      unique_tlds: 0,
-      avg_price: 0,
-      oldest_sale: null,
-      newest_sale: null
-    }
+    return getDefaultStats()
+  }
+}
+
+function getDefaultStats() {
+  return {
+    total_records: 0,
+    unique_tlds: 0,
+    avg_price: 0,
+    oldest_sale: null,
+    newest_sale: null
   }
 }

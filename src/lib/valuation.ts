@@ -2,6 +2,7 @@
 import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '../types'
 import { findKeywordValue } from '../data/industry-keywords'
 import { findComparables } from '../data/sample-comps'
+import { findDatabaseComparables } from './database-comps'
 import { analyzeBrandability, estimateTraffic, analyzeTrademarkRisk, getWhoisData, type WhoisData } from './xai'
 
 export const DEFAULT_WEIGHTS: FactorWeights = {
@@ -148,12 +149,21 @@ export function scoreComparableSales(domain: string, comps: any[] = []): number 
   }
 }
 
-export async function scoreDomainAge(domain: string, providedAgeInYears?: number): Promise<{score: number; dataSource: string; error?: string}> {
+export async function scoreDomainAge(domain: string, providedAgeInYears?: number, skipNetwork?: boolean): Promise<{score: number; dataSource: string; error?: string}> {
   // If age is already provided, use it
   if (providedAgeInYears) {
     return {
       score: calculateAgeScore(providedAgeInYears), 
       dataSource: 'user_provided'
+    }
+  }
+
+  // Skip network calls for fast evaluation mode
+  if (skipNetwork) {
+    return {
+      score: 25, // Conservative neutral score for fast evaluation
+      dataSource: 'estimated',
+      error: 'Network calls skipped for fast evaluation'
     }
   }
 
@@ -448,12 +458,23 @@ export async function evaluateDomain(
     country?: string; 
     useComps?: boolean;
     domainAge?: number;
+    skipWhois?: boolean; // New option for fast evaluation
   } = {},
   weights: FactorWeights = DEFAULT_WEIGHTS
 ): Promise<DomainAppraisal> {
   
-  // Get WHOIS data for the domain
-  const whoisData = await getWhoisData(domain)
+  // Get WHOIS data only if not skipping (for fast evaluation)
+  let whoisData: WhoisData
+  if (options.skipWhois) {
+    // Use fallback WHOIS data for fast evaluation
+    whoisData = {
+      domain: domain,
+      isAvailable: true, // Default assumption for faster processing
+      ageInYears: 0 // Will be updated in background
+    }
+  } else {
+    whoisData = await getWhoisData(domain)
+  }
   
   // Score each factor
   const lengthScore = scoreLengthAndSimplicity(domain)
@@ -461,10 +482,27 @@ export async function evaluateDomain(
   const tldScore = scoreTLD(domain, options.country)
   const industryScore = scoreIndustryRelevance(keywordResult.industry, keywordResult.keywords)
   
-  // Load comparable sales
-  const comparables = await findComparables(domain, 5)
+  // Load comparable sales - use database comparables if available, fallback to sample data
+  let comparables
+  if (options.useComps !== false) {
+    try {
+      comparables = await findDatabaseComparables(domain, 5)
+      if (comparables.length === 0) {
+        // Fallback to sample data if no database comparables found
+        comparables = await findComparables(domain, 5)
+        console.log(`Using sample comparables for ${domain} (no database matches found)`)
+      } else {
+        console.log(`Using ${comparables.length} database comparables for ${domain}`)
+      }
+    } catch (error) {
+      console.error('Database comparables error, falling back to sample data:', error)
+      comparables = await findComparables(domain, 5)
+    }
+  } else {
+    comparables = []
+  }
   const compsScore = scoreComparableSales(domain, comparables)
-  const ageResult = await scoreDomainAge(domain, whoisData.ageInYears || options.domainAge)
+  const ageResult = await scoreDomainAge(domain, whoisData.ageInYears || options.domainAge, options.skipWhois)
   const trafficResult = await scoreDomainTraffic(domain, options.userTraffic)
   const liquidityScore = scoreLiquidity(domain)
   
@@ -475,7 +513,8 @@ export async function evaluateDomain(
   const legalRisk = await assessLegalRisk(domain)
   
   // Apply availability penalty - if domain is not available, reduce value significantly
-  const availabilityMultiplier = whoisData.isAvailable ? 1.0 : 0.6 // 40% reduction for taken domains
+  // Use conservative estimate when WHOIS is skipped
+  const availabilityMultiplier = options.skipWhois ? 0.8 : (whoisData.isAvailable ? 1.0 : 0.6)
   
   // Calculate weighted score
   const breakdown: FactorBreakdown[] = [
@@ -489,7 +528,7 @@ export async function evaluateDomain(
     { factor: 'traffic', score: trafficResult.score, weight: weights.traffic, contribution: weights.traffic * trafficResult.score },
     { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore },
     { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` },
-    { factor: 'availability', score: whoisData.isAvailable ? 100 : 60, weight: 0, contribution: 0, description: `${whoisData.isAvailable ? 'AVAILABLE' : 'TAKEN'}: Acts as ${availabilityMultiplier}x multiplier` }
+    { factor: 'availability', score: options.skipWhois ? 80 : (whoisData.isAvailable ? 100 : 60), weight: 0, contribution: 0, description: options.skipWhois ? 'ESTIMATED: Acts as 0.8x multiplier' : `${whoisData.isAvailable ? 'AVAILABLE' : 'TAKEN'}: Acts as ${availabilityMultiplier}x multiplier` }
   ]
   
   const rawScore = breakdown.reduce((sum, factor) => sum + factor.contribution, 0)

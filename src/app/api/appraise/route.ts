@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateDomain } from '../../../lib/valuation'
+import { startBackgroundWhoisUpdate } from '../../../lib/background-whois'
 import { checkRateLimit } from '../../../lib/rate-limiter'
 import { getSupabaseClient } from '../../../lib/database'
 import { createHash } from 'crypto'
@@ -94,14 +95,14 @@ export async function POST(request: NextRequest) {
     
     // If no cached result, perform fresh evaluation
     if (!appraisal) {
-      console.log(`Performing fresh evaluation for ${cleanDomain}`)
-      appraisal = await evaluateDomain(cleanDomain, options)
+      console.log(`Performing fast evaluation for ${cleanDomain} (WHOIS in background)`)
+      appraisal = await evaluateDomain(cleanDomain, { ...options, skipWhois: true })
       
       // Persist new appraisal to database
       try {
         const supabase = await getSupabaseClient()
         
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
           .from('appraisals')
           .insert({
             domain: appraisal.domain,
@@ -114,8 +115,15 @@ export async function POST(request: NextRequest) {
             whois_data: appraisal.whoisData,
             options_hash: optionsHash
           })
+          .select('id')
+          .single()
         
         if (error) throw error
+        
+        // Start WHOIS lookup in background to update the record later
+        if (insertedData?.id) {
+          startBackgroundWhoisUpdate(cleanDomain, insertedData.id)
+        }
       } catch (dbError) {
         console.error('Failed to persist appraisal:', dbError)
         // Continue anyway - don't fail the request if DB save fails
