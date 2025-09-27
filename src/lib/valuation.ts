@@ -1,5 +1,5 @@
 // Core domain valuation algorithm implementing the 10-factor system
-import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal } from '../types'
+import type { ValuationFactors, FactorWeights, FactorBreakdown, DomainAppraisal, ComparableSale } from '../types'
 import { findKeywordValue } from '../data/industry-keywords'
 import { findComparables } from '../data/sample-comps'
 import { findDatabaseComparables } from './database-comps'
@@ -483,7 +483,7 @@ export async function evaluateDomain(
   const industryScore = scoreIndustryRelevance(keywordResult.industry, keywordResult.keywords)
   
   // Load comparable sales - use database comparables if available, fallback to sample data
-  let comparables
+  let comparables: ComparableSale[]
   if (options.useComps !== false) {
     try {
       comparables = await findDatabaseComparables(domain, 5)
