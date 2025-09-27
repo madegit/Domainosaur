@@ -69,13 +69,40 @@ CREATE INDEX idx_appraisals_domain_created ON appraisals (domain, created_at DES
 CREATE INDEX idx_appraisals_domain_options_created ON appraisals (domain, options_hash, created_at DESC);
 ```
 
-## 5. Optional: Set up Domain Sales Data
+## 5. Set up Domain Sales Data (For Comparables Feature)
 
-If you want to use the domain comparison features:
+To enable domain comparables, create the domain sales table in Supabase SQL Editor:
 
-1. Create a `domain_sales` table in Supabase
-2. Import your CSV data using the Supabase dashboard
-3. Update the database-comps.ts file to use Supabase queries
+```sql
+-- Create domain_sales table that matches your CSV headers
+CREATE TABLE domain_sales (
+  id SERIAL PRIMARY KEY,
+  date DATE NOT NULL,
+  domain VARCHAR(255) NOT NULL,
+  price INTEGER NOT NULL,
+  venue VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add indexes for performance
+CREATE INDEX idx_domain_sales_domain ON domain_sales (domain);
+CREATE INDEX idx_domain_sales_date ON domain_sales (date);
+CREATE INDEX idx_domain_sales_price ON domain_sales (price);
+CREATE INDEX idx_domain_sales_venue ON domain_sales (venue);
+
+-- Enable RLS
+ALTER TABLE domain_sales ENABLE ROW LEVEL SECURITY;
+
+-- Allow read access for comparables lookup
+CREATE POLICY "Allow read access to domain_sales" ON domain_sales
+  FOR SELECT USING (true);
+```
+
+After creating this table:
+1. Go to **Table Editor** → **domain_sales** 
+2. Click **Insert** → **Import data via spreadsheet**
+3. Upload your `domain-sales.csv` file
+4. The headers should now match: `date`, `domain`, `price`, `venue`
 
 ## 6. Security Configuration (Important!)
 
