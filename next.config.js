@@ -12,8 +12,7 @@ const nextConfig = {
     '*.kirk.replit.dev',
     '*.worf.replit.dev',
     '*.picard.replit.dev',
-    'c96d86d2-c1e1-4e8b-91a0-cc65cbbe206e-00-30m0q5opiyuox.worf.replit.dev',
-    'ef8ed370-6e88-41a7-86b7-a1d82e28d827-00-2sgh7vzej807a.picard.replit.dev',
+    '5712ab05-2de5-49f1-813c-0745b492818f-00-tpu3ofwkju69.worf.replit.dev',
     '127.0.0.1',
     'localhost',
     '0.0.0.0'
