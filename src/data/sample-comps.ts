@@ -1,10 +1,21 @@
 // Import AI-powered comparable sales generation
 import { generateRealisticComparables, type ComparableSale } from '../lib/xai'
 
-// Real comparable sales using AI instead of dummy data
+// Real comparable sales using database-driven approach
 export async function findComparables(domain: string, limit: number = 5): Promise<ComparableSale[]> {
   try {
-    // Try to fetch real comparable sales from NameBio API first
+    // First try database comparables (our new primary source)
+    const { findDatabaseComparables } = await import('../lib/database-comps')
+    const dbComps = await findDatabaseComparables(domain, limit)
+    if (dbComps.length > 0) {
+      return dbComps
+    }
+  } catch (error) {
+    console.log('Database comparables failed, trying API fallback:', error)
+  }
+
+  try {
+    // Fallback to NameBio API if database fails
     const realComps = await fetchRealComparables(domain, limit)
     if (realComps.length > 0) {
       return realComps
@@ -14,7 +25,7 @@ export async function findComparables(domain: string, limit: number = 5): Promis
   }
 
   try {
-    // Use AI to generate realistic comparable sales instead of dummy data
+    // Use AI to generate realistic comparable sales as backup
     const aiComps = await generateRealisticComparables(domain, limit)
     if (aiComps.length > 0) {
       return aiComps
@@ -140,5 +151,5 @@ function generateConservativeFallback(domain: string, limit: number = 5): Compar
     })
   }
   
-  return comparables.sort((a, b) => b.similarity - a.similarity)
+  return comparables.sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
 }

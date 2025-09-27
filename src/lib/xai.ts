@@ -206,7 +206,7 @@ export interface ComparableSale {
   soldPrice: number;
   soldDate: string;
   source: string;
-  similarity: number;
+  similarity?: number;
 }
 
 export interface WhoisData {
