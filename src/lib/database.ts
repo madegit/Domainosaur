@@ -1,8 +1,31 @@
-import { Pool } from 'pg'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
+// Create a Supabase client for server-side operations
+async function getSupabaseClient() {
+  const cookieStore = await cookies()
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Server component - ignore
+          }
+        },
+      },
+    }
+  )
+}
 
 // Database initialization promise to prevent multiple concurrent initializations
 let initPromise: Promise<void> | null = null
@@ -23,46 +46,18 @@ export async function initDatabase() {
 }
 
 async function performInit() {
-  const client = await pool.connect()
+  const supabase = await getSupabaseClient()
   
   try {
-    // Create appraisals table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS appraisals (
-        id SERIAL PRIMARY KEY,
-        domain VARCHAR(255) NOT NULL,
-        final_score DECIMAL(5,2) NOT NULL,
-        breakdown JSONB NOT NULL,
-        price_estimate JSONB NOT NULL,
-        comps JSONB DEFAULT '[]',
-        legal_flag VARCHAR(10) DEFAULT 'clear',
-        ai_comment TEXT,
-        whois_data JSONB NULL,
-        options_hash VARCHAR(32) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        user_id VARCHAR(255) NULL
-      )
-    `)
+    // Note: With Supabase, table creation should be done through the Supabase dashboard
+    // or SQL editor, not programmatically. This is just a placeholder to maintain compatibility.
+    // The actual table should be created in your Supabase project.
     
-    // Add whois_data column to existing tables if it doesn't exist
-    await client.query(`
-      ALTER TABLE appraisals 
-      ADD COLUMN IF NOT EXISTS whois_data JSONB NULL
-    `)
-    
-    // Add options_hash column to existing tables if it doesn't exist  
-    await client.query(`
-      ALTER TABLE appraisals 
-      ADD COLUMN IF NOT EXISTS options_hash VARCHAR(32) NULL
-    `)
-    
-    // Note: Only creating appraisals table - comps are stored in appraisals.comps JSONB
-    // Factor weights and legal brands are hardcoded in valuation.ts for simplicity
-    
-    console.log('Database initialized successfully')
-  } finally {
-    client.release()
+    console.log('Database initialized successfully (using Supabase)')
+  } catch (error) {
+    console.error('Failed to initialize Supabase:', error)
+    throw error
   }
 }
 
-export { pool }
+export { getSupabaseClient }

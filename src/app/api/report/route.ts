@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { pool } from '../../../lib/database'
+import { getSupabaseClient } from '../../../lib/database'
 import { generateValuationPDF, generateBasicPDF } from '../../../lib/pdf-generator'
 import '../../../app/startup' // Ensure database is initialized
 
@@ -17,16 +17,18 @@ export async function POST(request: NextRequest) {
     // Get latest appraisal for this domain from database
     let appraisalData = null
     try {
-      const client = await pool.connect()
-      try {
-        const result = await client.query(
-          'SELECT * FROM appraisals WHERE domain = $1 ORDER BY created_at DESC LIMIT 1',
-          [domain]
-        )
-        appraisalData = result.rows[0]
-      } finally {
-        client.release()
-      }
+      const supabase = await getSupabaseClient()
+      
+      const { data: results, error } = await supabase
+        .from('appraisals')
+        .select('*')
+        .eq('domain', domain)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (error) throw error
+      
+      appraisalData = results && results.length > 0 ? results[0] : null
     } catch (dbError) {
       console.error('Failed to fetch appraisal:', dbError)
     }

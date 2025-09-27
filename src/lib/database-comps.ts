@@ -1,4 +1,4 @@
-import { pool } from './database'
+import { getSupabaseClient } from './database'
 import type { ComparableSale } from '../types'
 
 export interface SimilarityFactors {
@@ -23,89 +23,27 @@ export async function findDatabaseComparables(
   limit: number = 5,
   weights: SimilarityFactors = DEFAULT_SIMILARITY_WEIGHTS
 ): Promise<ComparableSale[]> {
-  const client = await pool.connect()
-  
   try {
     const targetInfo = extractDomainInfo(targetDomain)
     if (!targetInfo) {
       return []
     }
     
-    // Query strategy: Find candidates and then calculate similarity
-    const candidateQuery = `
-      SELECT 
-        domain, 
-        sale_price, 
-        sale_date, 
-        sale_venue,
-        domain_name,
-        tld,
-        domain_length,
-        has_hyphens,
-        has_numbers
-      FROM domain_sales 
-      WHERE 
-        -- Same TLD gets priority, but include others
-        (tld = $1 OR tld IN ('com', 'net', 'org'))
-        -- Similar length (±3 characters)
-        AND domain_length BETWEEN $2 AND $3
-        -- Price range filtering (avoid extreme outliers)
-        AND sale_price BETWEEN $4 AND $5
-        -- Recent sales (last 10 years) get priority
-        AND sale_date >= '2014-01-01'
-      ORDER BY 
-        -- Prioritize same TLD
-        CASE WHEN tld = $1 THEN 0 ELSE 1 END,
-        -- Prioritize similar length
-        ABS(domain_length - $6),
-        -- Recent sales first
-        sale_date DESC
-      LIMIT $7
-    `
+    // Note: Temporarily returning empty array until domain_sales table is set up in Supabase
+    // The domain_sales table needs to be created in your Supabase project first
+    console.log('Database comparables feature temporarily disabled during Supabase migration')
+    return []
     
-    // Calculate reasonable price range based on domain characteristics
-    const estimatedPriceRange = estimatePriceRange(targetInfo)
-    
-    const result = await client.query(candidateQuery, [
-      targetInfo.tld,
-      Math.max(1, targetInfo.domainLength - 3), // min length
-      targetInfo.domainLength + 3, // max length
-      estimatedPriceRange.min,
-      estimatedPriceRange.max,
-      targetInfo.domainLength,
-      limit * 3 // Get more candidates to choose from
-    ])
-    
-    // Calculate similarity scores for each candidate
-    const comparables: ComparableSale[] = result.rows
-      .map(row => {
-        const similarity = calculateSimilarity(targetInfo, {
-          domainName: row.domain_name,
-          tld: row.tld,
-          domainLength: row.domain_length,
-          hasHyphens: row.has_hyphens,
-          hasNumbers: row.has_numbers
-        }, weights)
-        
-        return {
-          domain: row.domain,
-          soldPrice: row.sale_price,
-          soldDate: row.sale_date,
-          source: `Database (${row.sale_venue})`,
-          similarity: Math.round(similarity)
-        }
-      })
-      .filter(comp => comp.similarity >= 40) // Only include reasonably similar domains
-      .sort((a, b) => (b.similarity || 0) - (a.similarity || 0)) // Sort by similarity
-      .slice(0, limit) // Take top results
-    
-    return comparables
+    // TODO: Implement this when domain_sales table is available in Supabase
+    // You'll need to:
+    // 1. Create a domain_sales table in Supabase with the required columns
+    // 2. Import your domain sales data 
+    // 3. Create a custom RPC function for the complex query
+    // 4. Or break down the query into multiple Supabase API calls
     
   } catch (error) {
     console.error('Error finding database comparables:', error)
     return []
-  } finally {
-    client.release()
   }
 }
 
@@ -287,21 +225,27 @@ function extractDomainInfo(domain: string): DomainInfo | null {
  * Get statistics about comparable sales for debugging
  */
 export async function getComparablesStats(): Promise<any> {
-  const client = await pool.connect()
-  
   try {
-    const stats = await client.query(`
-      SELECT 
-        COUNT(*) as total_records,
-        COUNT(DISTINCT tld) as unique_tlds,
-        AVG(sale_price)::int as avg_price,
-        MIN(sale_date) as oldest_sale,
-        MAX(sale_date) as newest_sale
-      FROM domain_sales
-    `)
+    // Note: Returning default stats until domain_sales table is set up in Supabase
+    console.log('Comparables stats feature temporarily disabled during Supabase migration')
+    return {
+      total_records: 0,
+      unique_tlds: 0,
+      avg_price: 0,
+      oldest_sale: null,
+      newest_sale: null
+    }
     
-    return stats.rows[0]
-  } finally {
-    client.release()
+    // TODO: Implement this when domain_sales table is available in Supabase
+    
+  } catch (error) {
+    console.error('Error getting comparables stats:', error)
+    return {
+      total_records: 0,
+      unique_tlds: 0,
+      avg_price: 0,
+      oldest_sale: null,
+      newest_sale: null
+    }
   }
 }

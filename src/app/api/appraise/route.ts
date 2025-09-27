@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateDomain } from '../../../lib/valuation'
 import { checkRateLimit } from '../../../lib/rate-limiter'
-import { pool } from '../../../lib/database'
+import { getSupabaseClient } from '../../../lib/database'
 import { createHash } from 'crypto'
 import '../../../app/startup' // Ensure database is initialized
 
@@ -58,37 +58,35 @@ export async function POST(request: NextRequest) {
     const cacheWindow = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
     
     try {
-      const client = await pool.connect()
-      try {
-        const result = await client.query(`
-          SELECT domain, final_score, breakdown, price_estimate, comps, legal_flag, ai_comment, whois_data, created_at
-          FROM appraisals 
-          WHERE domain = $1 
-            AND (options_hash = $2 OR options_hash IS NULL)
-            AND created_at > $3 
-          ORDER BY created_at DESC 
-          LIMIT 1
-        `, [cleanDomain, optionsHash, new Date(Date.now() - cacheWindow)])
+      const supabase = await getSupabaseClient()
+      
+      const { data: cachedResults, error } = await supabase
+        .from('appraisals')
+        .select('domain, final_score, breakdown, price_estimate, comps, legal_flag, ai_comment, whois_data, created_at')
+        .eq('domain', cleanDomain)
+        .or(`options_hash.eq.${optionsHash},options_hash.is.null`)
+        .gt('created_at', new Date(Date.now() - cacheWindow).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (error) throw error
+      
+      if (cachedResults && cachedResults.length > 0) {
+        const cached = cachedResults[0]
+        console.log(`Using cached evaluation for ${cleanDomain} from ${cached.created_at}`)
         
-        if (result.rows.length > 0) {
-          const cached = result.rows[0]
-          console.log(`Using cached evaluation for ${cleanDomain} from ${cached.created_at}`)
-          
-          // Return cached evaluation in the same format as fresh evaluation
-          appraisal = {
-            domain: cached.domain,
-            finalScore: parseFloat(cached.final_score),
-            bracket: getBracket(parseFloat(cached.final_score)),
-            priceEstimate: cached.price_estimate,
-            breakdown: cached.breakdown,
-            legalFlag: cached.legal_flag,
-            aiComment: cached.ai_comment,
-            comps: cached.comps || [],
-            whoisData: cached.whois_data || null
-          }
+        // Return cached evaluation in the same format as fresh evaluation
+        appraisal = {
+          domain: cached.domain,
+          finalScore: parseFloat(cached.final_score),
+          bracket: getBracket(parseFloat(cached.final_score)),
+          priceEstimate: cached.price_estimate,
+          breakdown: cached.breakdown,
+          legalFlag: cached.legal_flag,
+          aiComment: cached.ai_comment,
+          comps: cached.comps || [],
+          whoisData: cached.whois_data || null
         }
-      } finally {
-        client.release()
       }
     } catch (cacheError) {
       console.error('Cache lookup failed, proceeding with fresh evaluation:', cacheError)
@@ -101,25 +99,23 @@ export async function POST(request: NextRequest) {
       
       // Persist new appraisal to database
       try {
-        const client = await pool.connect()
-        try {
-          await client.query(`
-            INSERT INTO appraisals (domain, final_score, breakdown, price_estimate, comps, legal_flag, ai_comment, whois_data, options_hash)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [
-            appraisal.domain,
-            appraisal.finalScore,
-            JSON.stringify(appraisal.breakdown),
-            JSON.stringify(appraisal.priceEstimate),
-            JSON.stringify(appraisal.comps),
-            appraisal.legalFlag,
-            appraisal.aiComment,
-            JSON.stringify(appraisal.whoisData),
-            optionsHash
-          ])
-        } finally {
-          client.release()
-        }
+        const supabase = await getSupabaseClient()
+        
+        const { error } = await supabase
+          .from('appraisals')
+          .insert({
+            domain: appraisal.domain,
+            final_score: appraisal.finalScore,
+            breakdown: appraisal.breakdown,
+            price_estimate: appraisal.priceEstimate,
+            comps: appraisal.comps,
+            legal_flag: appraisal.legalFlag,
+            ai_comment: appraisal.aiComment,
+            whois_data: appraisal.whoisData,
+            options_hash: optionsHash
+          })
+        
+        if (error) throw error
       } catch (dbError) {
         console.error('Failed to persist appraisal:', dbError)
         // Continue anyway - don't fail the request if DB save fails
