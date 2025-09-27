@@ -4,6 +4,7 @@ import { findKeywordValue } from '../data/industry-keywords'
 import { findComparables } from '../data/sample-comps'
 import { findDatabaseComparables } from './database-comps'
 import { analyzeBrandability, estimateTraffic, analyzeTrademarkRisk, getWhoisData, type WhoisData } from './xai'
+import { extractTLD, extractDomainName, getTLDScore } from './tld-utils'
 
 export const DEFAULT_WEIGHTS: FactorWeights = {
   length: 0.12,
@@ -29,8 +30,8 @@ const LEGAL_BRANDS = [
 ]
 
 export function scoreLengthAndSimplicity(domain: string): number {
-  // Extract domain name without TLD
-  const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
+  // Extract domain name without TLD using proper TLD extraction
+  const domainName = extractDomainName(domain)
   
   const length = domainName.length
   const wordCount = domainName.split(/[-_]/).length
@@ -40,20 +41,39 @@ export function scoreLengthAndSimplicity(domain: string): number {
   
   let score = 0
   
-  // Base score based on length
-  if (length <= 6) {
-    score = 100
+  // Premium short domain scoring - reflects extreme rarity and value
+  if (length === 1) {
+    score = 100 // Practically impossible to get
+  } else if (length === 2) {
+    score = 100 // Extremely rare, mostly reserved
+  } else if (length === 3) {
+    score = 100 // Super rare and extremely valuable
+  } else if (length === 4) {
+    score = 95  // Rare and very valuable
+  } else if (length === 5) {
+    score = 85  // Valuable and sought after
+  } else if (length === 6) {
+    score = 75  // Good length, still valuable
+  } else if (length === 7) {
+    score = 65  // Decent length
+  } else if (length === 8) {
+    score = 55  // Acceptable length
   } else if (length <= 10) {
-    score = 70
+    score = 45  // Moderate length
+  } else if (length <= 12) {
+    score = 35  // Getting long
   } else if (length <= 15) {
-    score = 40
+    score = 25  // Long domain
   } else {
-    score = 20
+    score = 15  // Very long, hard to remember
   }
   
-  // Penalties
+  // Penalties for complexity
   if (hasHyphen) score -= 20
-  if (hasNumber) score -= 10
+  if (hasNumber) {
+    // Numbers are less penalized in very short domains
+    score -= length <= 4 ? 5 : 10
+  }
   if (hasUnderscore) score -= 15
   if (wordCount > 3) score -= 10
   
@@ -70,35 +90,8 @@ export function scoreKeywords(domain: string): { score: number; industry: string
 }
 
 export function scoreTLD(domain: string, targetCountry?: string): number {
-  const tld = domain.toLowerCase().split('.').pop() || ''
-  
-  switch (tld) {
-    case 'com':
-      return 100
-    case 'net':
-    case 'org':
-      return 70
-    case 'io':
-    case 'ai':
-      return 65
-    case 'co':
-    case 'me':
-      return 60
-    case 'app':
-    case 'tech':
-    case 'dev':
-      return 55
-    case 'xyz':
-    case 'info':
-    case 'biz':
-      return 45
-    default:
-      // Country code TLDs - boost if matches target country
-      if (tld.length === 2) {
-        return targetCountry && targetCountry.toLowerCase() === tld ? 75 : 50
-      }
-      return 40
-  }
+  const tld = extractTLD(domain);
+  return getTLDScore(tld, targetCountry);
 }
 
 export function scoreIndustryRelevance(industry: string, keywords: string[]): number {
@@ -306,36 +299,88 @@ async function estimateDomainTraffic(domain: string): Promise<number> {
 }
 
 export function scoreLiquidity(domain: string): number {
-  const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz)$/, '')
-  const tld = domain.toLowerCase().split('.').pop() || ''
+  const domainName = extractDomainName(domain)
+  const tld = extractTLD(domain)
   const length = domainName.length
   
-  // Very high liquidity patterns
+  // Premium short domains have extremely high liquidity due to rarity
   if (tld === 'com') {
-    if (length <= 3 && /^[a-z]+$/.test(domainName)) {
-      return 100 // LLL.com, LL.com
+    if (length <= 2 && /^[a-z]+$/.test(domainName)) {
+      return 100 // Extremely rare, instant liquidity
+    }
+    if (length === 3 && /^[a-z]+$/.test(domainName)) {
+      return 100 // 3-letter .com - premium liquidity
+    }
+    if (length === 4 && /^[a-z]+$/.test(domainName)) {
+      return 95 // 4-letter .com - excellent liquidity
+    }
+    if (length === 5 && /^[a-z]+$/.test(domainName) && !domainName.includes('-')) {
+      return 90 // 5-letter .com - high liquidity
     }
     if (length <= 6 && /^[a-z]+$/.test(domainName) && !domainName.includes('-')) {
-      return 90 // Short dictionary words
+      return 85 // 6-letter .com - good liquidity
     }
   }
   
-  // High liquidity
-  if (tld === 'com' && length <= 8 && !domainName.includes('-') && !domainName.includes('_')) {
-    return 80
+  // Premium TLD short patterns
+  if (['net', 'org'].includes(tld)) {
+    if (length <= 3 && /^[a-z]+$/.test(domainName)) {
+      return 95 // Short premium TLD
+    }
+    if (length === 4 && /^[a-z]+$/.test(domainName)) {
+      return 85
+    }
   }
   
-  // Medium liquidity
-  if ((tld === 'com' || tld === 'net' || tld === 'org') && length <= 12) {
-    return 60
+  // Tech TLDs
+  if (['io', 'ai'].includes(tld)) {
+    if (length <= 3 && /^[a-z]+$/.test(domainName)) {
+      return 90
+    }
+    if (length === 4 && /^[a-z]+$/.test(domainName)) {
+      return 80
+    }
   }
   
-  // Lower liquidity for newer TLDs or longer domains
-  if (length <= 10) {
-    return 45
+  // Premium country TLD patterns
+  if (['co.uk', 'com.au', 'co.nz'].includes(tld)) {
+    if (length <= 4 && /^[a-z]+$/.test(domainName)) {
+      return 85
+    }
+    if (length === 5 && /^[a-z]+$/.test(domainName)) {
+      return 75
+    }
   }
   
-  return 25
+  // Standard scoring based on length and TLD
+  let baseScore = 50
+  
+  if (tld === 'com') {
+    if (length <= 8) baseScore = 75
+    else if (length <= 12) baseScore = 65
+    else baseScore = 55
+  } else if (['net', 'org'].includes(tld)) {
+    if (length <= 8) baseScore = 65
+    else if (length <= 12) baseScore = 55
+    else baseScore = 45
+  } else if (['io', 'ai', 'co'].includes(tld)) {
+    if (length <= 8) baseScore = 60
+    else if (length <= 12) baseScore = 50
+    else baseScore = 40
+  } else {
+    if (length <= 8) baseScore = 50
+    else if (length <= 12) baseScore = 40
+    else baseScore = 30
+  }
+  
+  // Penalties for complexity
+  if (domainName.includes('-')) baseScore -= 15
+  if (/\d/.test(domainName)) {
+    // Numbers less penalized in short domains
+    baseScore -= length <= 4 ? 5 : 10
+  }
+  
+  return Math.max(20, baseScore)
 }
 
 export async function assessLegalRisk(domain: string): Promise<{ flag: 'clear' | 'warning' | 'severe'; multiplier: number; score: number }> {
@@ -412,23 +457,51 @@ function assessStaticLegalRisk(domainName: string): { flag: 'clear' | 'warning' 
   return { flag: 'clear', multiplier: 1.0, score: 100 }
 }
 
-export function mapScoreToPriceBracket(score: number): { min: number; max: number; bracket: string } {
-  // Recalibrated price brackets to reflect realistic market values
+export function mapScoreToPriceBracket(score: number, domain?: string): { min: number; max: number; bracket: string } {
+  let min: number, max: number
+  
+  // Check if this is a premium short .com domain for special pricing
+  const isPremium3Letter = domain && extractTLD(domain) === 'com' && extractDomainName(domain).length === 3
+  const isPremium4Letter = domain && extractTLD(domain) === 'com' && extractDomainName(domain).length === 4
+  
   if (score >= 80) {
-    return { min: 5000, max: 50000, bracket: '80-100' }
+    if (isPremium3Letter) {
+      min = 50000; max = 500000 // 3-letter .com premium range
+    } else if (isPremium4Letter) {
+      min = 25000; max = 100000 // 4-letter .com premium range
+    } else {
+      min = 5000; max = 50000 // Standard high-score range
+    }
+    return { min, max, bracket: '80-100' }
   } else if (score >= 60) {
-    return { min: 1000, max: 5000, bracket: '60-80' }
+    if (isPremium3Letter) {
+      min = 25000; max = 100000
+    } else if (isPremium4Letter) {
+      min = 10000; max = 50000
+    } else {
+      min = 1000; max = 5000
+    }
+    return { min, max, bracket: '60-80' }
   } else if (score >= 40) {
-    return { min: 300, max: 1000, bracket: '40-60' }
+    if (isPremium3Letter) {
+      min = 10000; max = 50000
+    } else if (isPremium4Letter) {
+      min = 5000; max = 25000
+    } else {
+      min = 300; max = 1000
+    }
+    return { min, max, bracket: '40-60' }
   } else if (score >= 20) {
-    return { min: 100, max: 300, bracket: '20-40' }
+    min = 100; max = 300
+    return { min, max, bracket: '20-40' }
   } else {
-    return { min: 25, max: 100, bracket: '0-20' }
+    min = 25; max = 100
+    return { min, max, bracket: '0-20' }
   }
 }
 
-export function calculatePriceEstimate(finalScore: number, compsMedian?: number): { investor: string; retail: string; explanation: string } {
-  const bracket = mapScoreToPriceBracket(finalScore)
+export function calculatePriceEstimate(finalScore: number, compsMedian?: number, domain?: string): { investor: string; retail: string; explanation: string } {
+  const bracket = mapScoreToPriceBracket(finalScore, domain)
   const bracketMidpoint = (bracket.min + bracket.max) / 2
   
   let investorPrice = bracket.min
@@ -462,6 +535,31 @@ export async function evaluateDomain(
   } = {},
   weights: FactorWeights = DEFAULT_WEIGHTS
 ): Promise<DomainAppraisal> {
+  
+  // Check if this is a premium short domain and adjust weights accordingly
+  const domainName = extractDomainName(domain)
+  const tld = extractTLD(domain)
+  const isPremiumShortDomain = (tld === 'com' && domainName.length <= 4) || 
+                               (['net', 'org'].includes(tld) && domainName.length <= 3) ||
+                               (['io', 'ai'].includes(tld) && domainName.length <= 3)
+  
+  // Dynamic weighting for premium short domains
+  let adjustedWeights = { ...weights }
+  if (isPremiumShortDomain) {
+    // Significantly increase length and liquidity weights for premium short domains
+    adjustedWeights = {
+      length: 0.25,     // Increased from 0.12 for premium shorts
+      keywords: 0.15,   // Slightly reduced
+      tld: 0.20,        // Increased since premium TLD matters more
+      brandability: 0.15, // Keep same
+      industry: 0.05,   // Reduced since length matters more
+      comps: 0.10,      // Slightly reduced  
+      age: 0.03,        // Reduced
+      traffic: 0.02,    // Reduced
+      liquidity: 0.15,  // Significantly increased for premium shorts
+      legal: 0.0        // Legal is still a multiplier
+    }
+  }
   
   // Get WHOIS data only if not skipping (for fast evaluation)
   let whoisData: WhoisData
@@ -516,23 +614,34 @@ export async function evaluateDomain(
   // Use conservative estimate when WHOIS is skipped
   const availabilityMultiplier = options.skipWhois ? 0.8 : (whoisData.isAvailable ? 1.0 : 0.6)
   
-  // Calculate weighted score
+  // Calculate weighted score using adjusted weights
   const breakdown: FactorBreakdown[] = [
-    { factor: 'length', score: lengthScore, weight: weights.length, contribution: weights.length * lengthScore },
-    { factor: 'keywords', score: keywordResult.score, weight: weights.keywords, contribution: weights.keywords * keywordResult.score },
-    { factor: 'tld', score: tldScore, weight: weights.tld, contribution: weights.tld * tldScore },
-    { factor: 'brandability', score: brandabilityResult.score, weight: weights.brandability, contribution: weights.brandability * brandabilityResult.score },
-    { factor: 'industry', score: industryScore, weight: weights.industry, contribution: weights.industry * industryScore },
-    { factor: 'comps', score: compsScore, weight: weights.comps, contribution: weights.comps * compsScore },
-    { factor: 'age', score: ageResult.score, weight: weights.age, contribution: weights.age * ageResult.score },
-    { factor: 'traffic', score: trafficResult.score, weight: weights.traffic, contribution: weights.traffic * trafficResult.score },
-    { factor: 'liquidity', score: liquidityScore, weight: weights.liquidity, contribution: weights.liquidity * liquidityScore },
+    { factor: 'length', score: lengthScore, weight: adjustedWeights.length, contribution: adjustedWeights.length * lengthScore },
+    { factor: 'keywords', score: keywordResult.score, weight: adjustedWeights.keywords, contribution: adjustedWeights.keywords * keywordResult.score },
+    { factor: 'tld', score: tldScore, weight: adjustedWeights.tld, contribution: adjustedWeights.tld * tldScore },
+    { factor: 'brandability', score: brandabilityResult.score, weight: adjustedWeights.brandability, contribution: adjustedWeights.brandability * brandabilityResult.score },
+    { factor: 'industry', score: industryScore, weight: adjustedWeights.industry, contribution: adjustedWeights.industry * industryScore },
+    { factor: 'comps', score: compsScore, weight: adjustedWeights.comps, contribution: adjustedWeights.comps * compsScore },
+    { factor: 'age', score: ageResult.score, weight: adjustedWeights.age, contribution: adjustedWeights.age * ageResult.score },
+    { factor: 'traffic', score: trafficResult.score, weight: adjustedWeights.traffic, contribution: adjustedWeights.traffic * trafficResult.score },
+    { factor: 'liquidity', score: liquidityScore, weight: adjustedWeights.liquidity, contribution: adjustedWeights.liquidity * liquidityScore },
     { factor: 'legal', score: legalRisk.score, weight: 0, contribution: 0, description: `${legalRisk.flag.toUpperCase()}: Acts as ${legalRisk.multiplier}x multiplier` },
     { factor: 'availability', score: options.skipWhois ? 80 : (whoisData.isAvailable ? 100 : 60), weight: 0, contribution: 0, description: options.skipWhois ? 'ESTIMATED: Acts as 0.8x multiplier' : `${whoisData.isAvailable ? 'AVAILABLE' : 'TAKEN'}: Acts as ${availabilityMultiplier}x multiplier` }
   ]
   
   const rawScore = breakdown.reduce((sum, factor) => sum + factor.contribution, 0)
-  const finalScore = rawScore * legalRisk.multiplier * availabilityMultiplier
+  
+  // Premium domain multiplier for extremely rare short domains
+  let premiumMultiplier = 1.0
+  if (tld === 'com') {
+    if (domainName.length === 3 && /^[a-z]+$/.test(domainName)) {
+      premiumMultiplier = 1.3 // 30% bonus for 3-letter .com
+    } else if (domainName.length === 4 && /^[a-z]+$/.test(domainName)) {
+      premiumMultiplier = 1.15 // 15% bonus for 4-letter .com
+    }
+  }
+  
+  const finalScore = rawScore * legalRisk.multiplier * availabilityMultiplier * premiumMultiplier
   
   // Calculate price estimate with comps median
   const sortedComparables = [...comparables].sort((a, b) => a.soldPrice - b.soldPrice)
@@ -540,8 +649,8 @@ export async function evaluateDomain(
     ? sortedComparables[Math.floor(sortedComparables.length / 2)].soldPrice
     : undefined
     
-  const priceEstimate = calculatePriceEstimate(finalScore, compsMedian)
-  const bracket = mapScoreToPriceBracket(finalScore)
+  const priceEstimate = calculatePriceEstimate(finalScore, compsMedian, domain)
+  const bracket = mapScoreToPriceBracket(finalScore, domain)
   
   return {
     domain,

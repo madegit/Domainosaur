@@ -2,6 +2,7 @@
 // Based on javascript_xai blueprint
 
 import OpenAI from "openai";
+import { extractTLD, extractDomainName } from './tld-utils';
 
 let openai: OpenAI | null = null;
 
@@ -81,7 +82,7 @@ export interface TrafficEstimate {
 
 export async function estimateTraffic(domain: string): Promise<TrafficEstimate> {
   try {
-    const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
+    const domainName = extractDomainName(domain)
     
     const client = getOpenAIClient();
     
@@ -146,7 +147,7 @@ export interface TrademarkRisk {
 
 export async function analyzeTrademarkRisk(domain: string): Promise<TrademarkRisk> {
   try {
-    const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
+    const domainName = extractDomainName(domain)
     
     const client = getOpenAIClient();
     
@@ -313,8 +314,8 @@ async function estimateAvailabilityWithAI(domain: string): Promise<WhoisData> {
 
 export async function generateRealisticComparables(domain: string, limit: number = 5): Promise<ComparableSale[]> {
   try {
-    const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
-    const tld = domain.split('.').pop()?.toLowerCase()
+    const domainName = extractDomainName(domain)
+    const tld = extractTLD(domain)
     
     const client = getOpenAIClient();
     
@@ -383,8 +384,8 @@ export async function generateRealisticComparables(domain: string, limit: number
 
 // Fallback functions for when AI analysis is unavailable
 function analyzeBrandabilityFallback(domain: string): BrandabilityResult {
-  const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
-  const tld = domain.split('.').pop()?.toLowerCase() || 'com'
+  const domainName = extractDomainName(domain)
+  const tld = extractTLD(domain)
   const length = domainName.length
   
   // Advanced brandability analysis
@@ -468,8 +469,8 @@ function analyzeBrandabilityFallback(domain: string): BrandabilityResult {
 }
 
 function estimateTrafficFallback(domain: string): TrafficEstimate {
-  const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
-  const tld = domain.split('.').pop()?.toLowerCase() || 'com'
+  const domainName = extractDomainName(domain)
+  const tld = extractTLD(domain)
   const length = domainName.length
   
   // More sophisticated traffic estimation based on domain characteristics
@@ -592,8 +593,8 @@ function estimateTrafficFallback(domain: string): TrafficEstimate {
 }
 
 function generateComparablesFallback(domain: string, limit: number = 5): ComparableSale[] {
-  const domainName = domain.toLowerCase().replace(/\.(com|net|org|io|ai|co|app|xyz|info|biz|me|tv|cc|ly|gl|tech|online|store|blog|site|news|pro|club|agency|studio|digital|dev|design|marketing|services|solutions|group|ventures|holdings|capital|fund|invest|crypto|blockchain|finance|bank|pay|wallet|trade|exchange|market|shop|buy|sell|deal|sale|cart|travel|hotel|flight|trip|vacation|booking|resort|learn|education|course|study|school|training|food|restaurant|delivery|recipe|kitchen|real|estate|property|home|house|rent|game|gaming|play|entertainment|fun|business|work|career|job|hire|health|medical|care|wellness|fitness|doctor|therapy|clinic|tech|software|cloud|data|digital|smart|auto|bot|ai)$/, '')
-  const tld = domain.split('.').pop()?.toLowerCase() || 'com'
+  const domainName = extractDomainName(domain)
+  const tld = extractTLD(domain)
   const length = domainName.length
   
   // Base price estimation

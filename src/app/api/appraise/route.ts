@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Clean and validate domain format
+    // Clean and validate domain format - support multi-level TLDs like .co.uk, .com.au, etc.
     const cleanDomain = domain.toLowerCase().trim()
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/.test(cleanDomain)) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,}\.)*[a-zA-Z]{2,}$/.test(cleanDomain)) {
       return NextResponse.json(
         { error: 'Invalid domain format' },
         { status: 400 }

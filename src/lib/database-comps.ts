@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './database'
 import type { ComparableSale } from '../types'
+import { extractTLD, extractDomainName } from './tld-utils'
 
 export interface SimilarityFactors {
   lengthWeight: number
@@ -242,15 +243,18 @@ interface DomainInfo {
  * Extract domain information for analysis
  */
 function extractDomainInfo(domain: string): DomainInfo | null {
-  const lowerDomain = domain.toLowerCase()
-  const parts = lowerDomain.split('.')
+  const lowerDomain = domain.toLowerCase().trim()
   
-  if (parts.length < 2) {
+  if (!lowerDomain.includes('.')) {
     return null
   }
   
-  const tld = parts[parts.length - 1]
-  const domainName = parts.slice(0, -1).join('.')
+  const tld = extractTLD(lowerDomain)
+  const domainName = extractDomainName(lowerDomain)
+  
+  if (!tld || !domainName) {
+    return null
+  }
   
   return {
     domainName,
